@@ -307,7 +307,7 @@ app.post("/api/auth/logout", (_req, res) => {
 // Images API (Unsplash)
 // ============================================================
 
-// Auth middleware for images
+// Auth middleware
 const requireAuth = async (
   req: express.Request,
   res: express.Response,
@@ -319,7 +319,8 @@ const requireAuth = async (
   }
 
   try {
-    jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    (req as any).userId = decoded.userId;
     next();
   } catch {
     return res.status(401).json({ error: "Invalid token" });
