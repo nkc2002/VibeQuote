@@ -242,14 +242,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         const mouseRelX = e.clientX - rect.left;
         const mouseRelY = e.clientY - rect.top;
 
-        // Calculate distance from start position to current position (simple delta)
-        const deltaX = mouseRelX - resizeStart.startRelX;
-        const deltaY = mouseRelY - resizeStart.startRelY;
-
-        // Use the diagonal distance for scaling
-        const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-        // Determine if scaling up or down based on direction
+        // Calculate distance from layer center for scaling
         // If moving away from center (positive delta in dominant direction), scale up
         const startDistFromCenter = Math.sqrt(
           Math.pow(resizeStart.startRelX - resizeStart.layerCenterX, 2) +

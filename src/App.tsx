@@ -58,7 +58,7 @@ function AppContent() {
   // Editor page (Protected) - No header, full screen editor
   if (currentPage === "editor") {
     return (
-      <ProtectedRoute redirectPath="#/editor">
+      <ProtectedRoute>
         <EditorPage />
       </ProtectedRoute>
     );
@@ -67,7 +67,7 @@ function AppContent() {
   // Dashboard page (Protected) - With unified header
   if (currentPage === "dashboard") {
     return (
-      <ProtectedRoute redirectPath="#/dashboard">
+      <ProtectedRoute>
         <>
           <Header activePage="dashboard" />
           <div
