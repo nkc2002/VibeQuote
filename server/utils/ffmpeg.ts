@@ -2,7 +2,10 @@
  * FFmpeg binary manager
  * Uses ffmpeg-static to guarantee binary availability
  */
-import ffmpegPath from "ffmpeg-static";
+import ffmpegStatic from "ffmpeg-static";
+
+// Cast to string since ffmpeg-static can return string | null
+const ffmpegPath: string | null = ffmpegStatic as unknown as string | null;
 
 /**
  * Ensure FFmpeg is available
@@ -25,5 +28,5 @@ export const getFFmpegPath = (): string => {
 };
 
 // For compatibility with previous imports
-export const FFMPEG_PATH = ffmpegPath || "ffmpeg";
+export const FFMPEG_PATH: string = ffmpegPath || "ffmpeg";
 export const FFMPEG_DIR = ""; // Not used with static
