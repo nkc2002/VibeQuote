@@ -5,7 +5,26 @@
  * Handles credentials for httpOnly cookies.
  */
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// Auto-detect API URL: use same origin on Vercel, localhost:3001 for local dev
+const getApiUrl = (): string => {
+  // If explicitly set, use that
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // On Vercel (production), use same origin (empty string = relative URLs)
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost"
+  ) {
+    return ""; // Use relative URLs like /api/auth/register
+  }
+
+  // Local development
+  return "http://localhost:3001";
+};
+
+const API_URL = getApiUrl();
 
 export interface ApiResponse<T = unknown> {
   success: boolean;
