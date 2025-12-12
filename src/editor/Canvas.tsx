@@ -55,6 +55,10 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       fontSize: number;
       layerX: number;
       layerY: number;
+      startRelX: number;
+      startRelY: number;
+      layerCenterX: number;
+      layerCenterY: number;
     } | null>(null);
 
     // Expose captureAsDataURL method to parent via ref
@@ -233,29 +237,33 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        const layer = layers.find((l) => l.id === resizing);
-        if (!layer) return;
 
-        // Calculate layer center in pixels
-        const centerX = (layer.x / 100) * rect.width;
-        const centerY = (layer.y / 100) * rect.height;
+        // Current mouse position relative to canvas
+        const mouseRelX = e.clientX - rect.left;
+        const mouseRelY = e.clientY - rect.top;
 
-        // Calculate distance from center to current mouse position
-        const currentDistance = Math.sqrt(
-          Math.pow(e.clientX - rect.left - centerX, 2) +
-            Math.pow(e.clientY - rect.top - centerY, 2)
+        // Calculate distance from start position to current position (simple delta)
+        const deltaX = mouseRelX - resizeStart.startRelX;
+        const deltaY = mouseRelY - resizeStart.startRelY;
+
+        // Use the diagonal distance for scaling
+        const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        // Determine if scaling up or down based on direction
+        // If moving away from center (positive delta in dominant direction), scale up
+        const startDistFromCenter = Math.sqrt(
+          Math.pow(resizeStart.startRelX - resizeStart.layerCenterX, 2) +
+            Math.pow(resizeStart.startRelY - resizeStart.layerCenterY, 2)
+        );
+        const currentDistFromCenter = Math.sqrt(
+          Math.pow(mouseRelX - resizeStart.layerCenterX, 2) +
+            Math.pow(mouseRelY - resizeStart.layerCenterY, 2)
         );
 
-        // Calculate initial distance from center to start mouse position
-        const startDistance = Math.sqrt(
-          Math.pow(resizeStart.mouseX - rect.left - centerX, 2) +
-            Math.pow(resizeStart.mouseY - rect.top - centerY, 2)
-        );
+        if (startDistFromCenter === 0) return;
 
-        if (startDistance === 0) return;
-
-        // Scale factor based on distance change
-        const scaleFactor = currentDistance / startDistance;
+        // Scale factor based on distance from layer center
+        const scaleFactor = currentDistFromCenter / startDistFromCenter;
 
         // Calculate new font size
         let newFontSize = Math.round(resizeStart.fontSize * scaleFactor);
@@ -278,7 +286,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         window.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("mouseup", handleMouseUp);
       };
-    }, [resizing, resizeStart, layers, onResizeLayer]);
+    }, [resizing, resizeStart, onResizeLayer]);
 
     // Handle resize start
     const handleResizeMouseDown = useCallback(
@@ -288,7 +296,17 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         e.stopPropagation();
 
         const layer = layers.find((l) => l.id === layerId);
-        if (!layer) return;
+        if (!layer || !canvasRef.current) return;
+
+        const rect = canvasRef.current.getBoundingClientRect();
+
+        // Calculate layer center in canvas coordinates
+        const layerCenterX = (layer.x / 100) * rect.width;
+        const layerCenterY = (layer.y / 100) * rect.height;
+
+        // Mouse position relative to canvas
+        const startRelX = e.clientX - rect.left;
+        const startRelY = e.clientY - rect.top;
 
         setResizing(layerId);
         setResizeStart({
@@ -297,6 +315,11 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
           fontSize: layer.fontSize,
           layerX: layer.x,
           layerY: layer.y,
+          // New fields for proper calculation
+          startRelX,
+          startRelY,
+          layerCenterX,
+          layerCenterY,
         });
       },
       [isPreviewMode, layers, onResizeLayer]
