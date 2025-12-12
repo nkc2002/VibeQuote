@@ -31,13 +31,6 @@ dotenv.config();
 
 const app = express();
 
-// Get allowed origins from environment
-const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:5173",
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  "https://vibe-quote.vercel.app",
-].filter(Boolean) as string[];
-
 // Security middleware
 app.use(
   helmet({
@@ -45,23 +38,26 @@ app.use(
   })
 );
 
-// CORS with credentials
+// CORS - allow all vercel.app domains and configured frontend
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
+      // Allow requests with no origin (mobile apps, curl, postman, etc.)
       if (!origin) return callback(null, true);
 
-      if (
-        allowedOrigins.some((allowed) =>
-          origin.startsWith(allowed.replace(/\/$/, ""))
-        )
-      ) {
+      // Allow all vercel.app domains (including preview deployments)
+      if (origin.includes("vercel.app")) {
         return callback(null, true);
       }
 
-      // In production, be more permissive for Vercel preview deployments
-      if (origin.includes("vercel.app")) {
+      // Allow configured frontend URL
+      const frontendUrl = process.env.FRONTEND_URL;
+      if (frontendUrl && origin.startsWith(frontendUrl.replace(/\/$/, ""))) {
+        return callback(null, true);
+      }
+
+      // Allow localhost for development
+      if (origin.includes("localhost")) {
         return callback(null, true);
       }
 
@@ -78,21 +74,33 @@ app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-// Database connection (cached for serverless)
+// Database connection (cached for serverless - uses global to persist across invocations)
 let dbConnected = false;
 
 const ensureDbConnection = async () => {
-  if (!dbConnected) {
+  if (!dbConnected && process.env.MONGODB_URI) {
     try {
       await connectDB();
       await ensureUserIndexes();
       await ensurePasswordResetIndexes();
       dbConnected = true;
+      console.log("MongoDB connected successfully");
     } catch (error) {
       console.error("Database connection failed:", error);
+      throw error; // Re-throw to let the caller know
     }
   }
 };
+
+// Middleware to ensure DB connection on every request
+app.use(async (_req, _res, next) => {
+  try {
+    await ensureDbConnection();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // ============================================================
 // Routes
@@ -100,11 +108,12 @@ const ensureDbConnection = async () => {
 
 // Health check
 app.get("/api/health", async (_req, res) => {
-  await ensureDbConnection();
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.VERCEL ? "vercel" : "local",
+    dbConnected: dbConnected,
+    mongoUri: process.env.MONGODB_URI ? "configured" : "missing",
   });
 });
 
@@ -116,6 +125,11 @@ app.use("/api/images", authMiddleware, apiLimiter, imagesRouter);
 app.use("/api/videos", authMiddleware, apiLimiter, videosRouter);
 app.use("/api/generate-video", authMiddleware, apiLimiter, generateVideoRouter);
 app.use("/api/render-video", authMiddleware, apiLimiter, renderVideoRouter);
+
+// 404 handler for unmatched API routes
+app.use("/api/*", (_req, res) => {
+  res.status(404).json({ error: "API endpoint not found" });
+});
 
 // Error handling
 app.use(
@@ -138,6 +152,5 @@ app.use(
 
 // Vercel serverless handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  await ensureDbConnection();
   return app(req as any, res as any);
 }
