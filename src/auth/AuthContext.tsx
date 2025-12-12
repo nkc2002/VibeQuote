@@ -147,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authApi.logout();
     setUser(null);
     setPendingRedirect(null);
+    setAuthModalOpen(false); // Ensure modal is closed
     // Redirect to landing (use replace to clear history)
     window.location.replace("/#/");
   };

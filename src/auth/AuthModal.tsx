@@ -145,8 +145,8 @@ const AuthModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {/* Backdrop - pointer-events-none to prevent closing on click */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-none" />
 
       {/* Modal */}
       <div
