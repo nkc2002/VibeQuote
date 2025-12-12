@@ -429,41 +429,44 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
               }
             }}
           >
-            {layer.text}
+            {/* Wrapper div for proper resize handle positioning */}
+            <div className="relative inline-block">
+              {layer.text}
 
-            {/* Resize handles - only show on selected layer when not in preview mode */}
-            {layer.isSelected && !isPreviewMode && onResizeLayer && (
-              <>
-                {/* SE corner (bottom-right) */}
-                <div
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 transition-colors"
-                  style={{ bottom: -6, right: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                  aria-label="Resize handle bottom-right"
-                />
-                {/* SW corner (bottom-left) */}
-                <div
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 transition-colors"
-                  style={{ bottom: -6, left: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                  aria-label="Resize handle bottom-left"
-                />
-                {/* NE corner (top-right) */}
-                <div
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 transition-colors"
-                  style={{ top: -6, right: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                  aria-label="Resize handle top-right"
-                />
-                {/* NW corner (top-left) */}
-                <div
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 transition-colors"
-                  style={{ top: -6, left: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                  aria-label="Resize handle top-left"
-                />
-              </>
-            )}
+              {/* Resize handles - only show on selected layer when not in preview mode */}
+              {layer.isSelected && !isPreviewMode && onResizeLayer && (
+                <>
+                  {/* SE corner (bottom-right) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 transition-colors z-50"
+                    style={{ bottom: -8, right: -8 }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize handle bottom-right"
+                  />
+                  {/* SW corner (bottom-left) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 transition-colors z-50"
+                    style={{ bottom: -8, left: -8 }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize handle bottom-left"
+                  />
+                  {/* NE corner (top-right) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 transition-colors z-50"
+                    style={{ top: -8, right: -8 }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize handle top-right"
+                  />
+                  {/* NW corner (top-left) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 transition-colors z-50"
+                    style={{ top: -8, left: -8 }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize handle top-left"
+                  />
+                </>
+              )}
+            </div>
           </div>
         ))}
 
