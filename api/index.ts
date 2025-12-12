@@ -1,50 +1,102 @@
 /**
  * Vercel Serverless API Entry Point
- * Simplified version for debugging
+ *
+ * This handles all /api/* routes for the VibeQuote application.
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,OPTIONS,PATCH,DELETE,POST,PUT"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
-  );
+const app = express();
 
-  // Handle preflight
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+// CORS - allow all vercel.app domains
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (origin.includes("vercel.app") || origin.includes("localhost")) {
+        return callback(null, true);
+      }
+      const frontendUrl = process.env.FRONTEND_URL;
+      if (frontendUrl && origin.startsWith(frontendUrl.replace(/\/$/, ""))) {
+        return callback(null, true);
+      }
+      callback(null, true); // Allow all for now during debugging
+    },
+    credentials: true,
+  })
+);
+
+app.use(cookieParser());
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
+// Health check
+app.get("/api/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    environment: "vercel",
+    config: {
+      mongoUri: process.env.MONGODB_URI ? "configured" : "MISSING",
+      jwtSecret: process.env.JWT_SECRET ? "configured" : "MISSING",
+      frontendUrl: process.env.FRONTEND_URL || "not set",
+    },
+  });
+});
+
+// Lazy load routes to avoid import issues
+let authRouter: express.Router | null = null;
+let routesLoaded = false;
+
+const loadRoutes = async () => {
+  if (routesLoaded) return;
+
+  try {
+    // Dynamically import auth router
+    const authModule = await import("../server/routes/auth");
+    authRouter = authModule.default;
+
+    if (authRouter) {
+      app.use("/api/auth", authRouter);
+    }
+
+    routesLoaded = true;
+    console.log("Routes loaded successfully");
+  } catch (error) {
+    console.error("Failed to load routes:", error);
   }
+};
 
-  const url = req.url || "";
+// Fallback route
+app.use("/api/*", (req, res) => {
+  res.status(404).json({
+    error: "API endpoint not found",
+    path: req.path,
+    routesLoaded,
+  });
+});
 
-  // Health check endpoint
-  if (url.includes("/api/health")) {
-    return res.status(200).json({
-      status: "ok",
-      timestamp: new Date().toISOString(),
-      environment: "vercel",
-      config: {
-        mongoUri: process.env.MONGODB_URI ? "configured" : "MISSING",
-        jwtSecret: process.env.JWT_SECRET ? "configured" : "MISSING",
-        frontendUrl: process.env.FRONTEND_URL || "not set",
-      },
-      path: url,
+// Error handler
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error("Server error:", err);
+    res.status(500).json({
+      error: "Internal server error",
+      message: err.message,
     });
   }
+);
 
-  // For now, return info about the request for debugging
-  return res.status(200).json({
-    message: "API is working",
-    path: url,
-    method: req.method,
-    note: "Full API routes are being configured",
-  });
+// Vercel handler
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  await loadRoutes();
+  return app(req as any, res as any);
 }
