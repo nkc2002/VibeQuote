@@ -51,6 +51,16 @@ const getCookieOptions = (remember: boolean) => ({
   path: "/",
 });
 
+// Helper to generate initials from name
+const getInitials = (name: string): string => {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
 // ============================================================
 // Validation Schemas
 // ============================================================
@@ -175,6 +185,7 @@ app.post("/api/auth/register", async (req, res) => {
         id: userId,
         name,
         email: email.toLowerCase(),
+        initials: getInitials(name),
       },
     });
   } catch (error) {
@@ -232,6 +243,7 @@ app.post("/api/auth/login", async (req, res) => {
         id: userId,
         name: user.name,
         email: user.email,
+        initials: getInitials(user.name),
       },
     });
   } catch (error) {
@@ -283,6 +295,7 @@ app.get("/api/auth/me", async (req, res) => {
         id: user._id.toString(),
         name: user.name,
         email: user.email,
+        initials: getInitials(user.name),
       },
     });
   } catch (error) {
