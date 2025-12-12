@@ -539,11 +539,10 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
                 // Use auto width when width=0 (initial), otherwise use fixed width
                 width: layer.width > 0 ? layer.width : "auto",
                 minHeight: layer.height > 0 ? layer.height : "auto",
-                maxWidth: layer.width > 0 ? undefined : "80%",
+                maxWidth: "80%",
                 wordWrap: "break-word",
                 overflowWrap: "break-word",
                 textAlign: "center",
-                whiteSpace: layer.width > 0 ? "normal" : "nowrap",
               }}
             >
               {layer.text}
