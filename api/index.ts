@@ -12,20 +12,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { MongoClient, Db, ObjectId } from "mongodb";
 import Joi from "joi";
-import { spawn } from "child_process";
-import {
-  createReadStream,
-  unlinkSync,
-  existsSync,
-  mkdirSync,
-  writeFileSync,
-  statSync,
-} from "fs";
-import path from "path";
-import os from "os";
-
-// FFmpeg path - will use system ffmpeg on Vercel
-const FFMPEG_PATH = process.env.FFMPEG_PATH || "ffmpeg";
 
 const app = express();
 
@@ -508,183 +494,28 @@ app.get("/api/images/random", requireAuth, async (req, res) => {
 // Video Generation API
 // ============================================================
 
-// Sanitize text for FFmpeg
-function sanitizeTextForFFmpeg(text: string): string {
-  return text
-    .replace(/\\/g, "\\\\\\\\")
-    .replace(/'/g, "'\\''")
-    .replace(/:/g, "\\:")
-    .replace(/%/g, "\\%")
-    .replace(/\n/g, "\\n");
-}
+// Video generation is NOT available on Vercel serverless
+// because FFmpeg is not installed. Users need to run local server.
+app.post("/api/render-video", requireAuth, async (_req, res) => {
+  res.status(503).json({
+    error: "Video generation not available",
+    message:
+      "Tính năng tạo video không khả dụng trên cloud version. Vui lòng chạy local server để sử dụng tính năng này.",
+    details:
+      "FFmpeg không có sẵn trên Vercel serverless. Chạy 'npm run dev:server' trên máy local để tạo video.",
+    code: "FFMPEG_NOT_AVAILABLE",
+  });
+});
 
-// Generate video endpoint
-app.post("/api/render-video", requireAuth, async (req, res) => {
-  const startTime = Date.now();
-  let tempDir = "";
-  let imagePath = "";
-  let outputPath = "";
-
-  try {
-    const {
-      wrappedText = "",
-      backgroundImageUrl,
-      canvasWidth = 1080,
-      canvasHeight = 1920,
-      fontSize = 48,
-      fontColor = "rgba(255,255,255,1)",
-      duration = 5,
-    } = req.body;
-
-    if (!backgroundImageUrl) {
-      return res.status(400).json({ error: "backgroundImageUrl is required" });
-    }
-
-    // Create temp directory
-    tempDir = path.join(os.tmpdir(), `vibequote-${Date.now()}`);
-    if (!existsSync(tempDir)) {
-      mkdirSync(tempDir, { recursive: true });
-    }
-
-    // Download background image
-    console.log("[Video] Downloading background image...");
-    const imageResponse = await fetch(backgroundImageUrl);
-    if (!imageResponse.ok) {
-      throw new Error("Failed to download background image");
-    }
-    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
-    imagePath = path.join(tempDir, "bg.jpg");
-    writeFileSync(imagePath, imageBuffer);
-
-    // Prepare output
-    outputPath = path.join(tempDir, "output.mp4");
-
-    // Parse font color
-    const colorMatch = fontColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    const r = colorMatch ? parseInt(colorMatch[1]) : 255;
-    const g = colorMatch ? parseInt(colorMatch[2]) : 255;
-    const b = colorMatch ? parseInt(colorMatch[3]) : 255;
-    const hexColor = [r, g, b]
-      .map((c) => c.toString(16).padStart(2, "0"))
-      .join("")
-      .toUpperCase();
-
-    // Sanitize text
-    const sanitizedText = sanitizeTextForFFmpeg(wrappedText);
-
-    // Build FFmpeg filter
-    const textX = `(w-text_w)/2`;
-    const textY = `(h-text_h)/2`;
-
-    const filterComplex = [
-      `[0:v]scale=${canvasWidth}:${canvasHeight}:force_original_aspect_ratio=increase,crop=${canvasWidth}:${canvasHeight},loop=loop=${
-        duration * 30
-      }:size=1:start=0[bg]`,
-      `[bg]drawtext=text='${sanitizedText}':fontsize=${fontSize}:fontcolor=0x${hexColor}:x=${textX}:y=${textY}:line_spacing=10[out]`,
-    ].join(";");
-
-    // FFmpeg arguments
-    const ffmpegArgs = [
-      "-y",
-      "-loop",
-      "1",
-      "-i",
-      imagePath,
-      "-filter_complex",
-      filterComplex,
-      "-map",
-      "[out]",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "ultrafast",
-      "-tune",
-      "stillimage",
-      "-t",
-      String(duration),
-      "-pix_fmt",
-      "yuv420p",
-      "-movflags",
-      "+faststart",
-      outputPath,
-    ];
-
-    console.log("[Video] Running FFmpeg...");
-    console.log("[Video] FFmpeg path:", FFMPEG_PATH);
-
-    // Run FFmpeg
-    await new Promise<void>((resolve, reject) => {
-      const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs, {
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-
-      let stderr = "";
-      ffmpeg.stderr?.on("data", (data) => {
-        stderr += data.toString();
-      });
-
-      ffmpeg.on("close", (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          console.error("[Video] FFmpeg stderr:", stderr);
-          reject(new Error(`FFmpeg exited with code ${code}`));
-        }
-      });
-
-      ffmpeg.on("error", (err) => {
-        reject(err);
-      });
-
-      // Timeout after 55 seconds
-      setTimeout(() => {
-        ffmpeg.kill("SIGKILL");
-        reject(new Error("FFmpeg timeout"));
-      }, 55000);
-    });
-
-    // Check output
-    if (!existsSync(outputPath)) {
-      throw new Error("FFmpeg did not produce output file");
-    }
-
-    const stats = statSync(outputPath);
-    console.log(
-      `[Video] Generated in ${Date.now() - startTime}ms, size: ${
-        stats.size
-      } bytes`
-    );
-
-    // Stream the video
-    res.setHeader("Content-Type", "video/mp4");
-    res.setHeader("Content-Length", stats.size);
-    res.setHeader("Content-Disposition", "attachment; filename=vibequote.mp4");
-
-    const stream = createReadStream(outputPath);
-    stream.pipe(res);
-
-    stream.on("end", () => {
-      // Cleanup
-      try {
-        if (existsSync(imagePath)) unlinkSync(imagePath);
-        if (existsSync(outputPath)) unlinkSync(outputPath);
-      } catch {}
-    });
-  } catch (error) {
-    console.error("[Video] Error:", error);
-
-    // Cleanup on error
-    try {
-      if (imagePath && existsSync(imagePath)) unlinkSync(imagePath);
-      if (outputPath && existsSync(outputPath)) unlinkSync(outputPath);
-    } catch {}
-
-    res.status(500).json({
-      error: "Video generation failed",
-      message: (error as Error).message,
-      ffmpegPath: FFMPEG_PATH,
-    });
-  }
+app.post("/api/generate-video", requireAuth, async (_req, res) => {
+  res.status(503).json({
+    error: "Video generation not available",
+    message:
+      "Tính năng tạo video không khả dụng trên cloud version. Vui lòng chạy local server để sử dụng tính năng này.",
+    details:
+      "FFmpeg không có sẵn trên Vercel serverless. Chạy 'npm run dev:server' trên máy local để tạo video.",
+    code: "FFMPEG_NOT_AVAILABLE",
+  });
 });
 
 // 404 handler
