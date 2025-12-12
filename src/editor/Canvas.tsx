@@ -179,16 +179,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
         // Don't start drag if clicking on resize handle
         const target = e.target as HTMLElement;
-        if (
-          target.classList.contains("cursor-se-resize") ||
-          target.classList.contains("cursor-sw-resize") ||
-          target.classList.contains("cursor-ne-resize") ||
-          target.classList.contains("cursor-nw-resize") ||
-          target.classList.contains("cursor-n-resize") ||
-          target.classList.contains("cursor-s-resize") ||
-          target.classList.contains("cursor-e-resize") ||
-          target.classList.contains("cursor-w-resize")
-        ) {
+        if (target.hasAttribute("data-resize")) {
           return;
         }
 
@@ -557,26 +548,31 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
             {layer.isSelected && !isPreviewMode && onResizeLayer && (
               <>
                 <div
+                  data-resize="se"
                   className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
                   style={{ bottom: -6, right: -6 }}
                   onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "se")}
                 />
                 <div
+                  data-resize="sw"
                   className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
                   style={{ bottom: -6, left: -6 }}
                   onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "sw")}
                 />
                 <div
+                  data-resize="ne"
                   className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
                   style={{ top: -6, right: -6 }}
                   onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "ne")}
                 />
                 <div
+                  data-resize="nw"
                   className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
                   style={{ top: -6, left: -6 }}
                   onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "nw")}
                 />
                 <div
+                  data-resize="n"
                   className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                   style={{
                     top: -6,
@@ -586,6 +582,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "n")}
                 />
                 <div
+                  data-resize="s"
                   className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                   style={{
                     bottom: -6,
@@ -595,6 +592,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "s")}
                 />
                 <div
+                  data-resize="w"
                   className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                   style={{
                     left: -6,
@@ -604,6 +602,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
                   onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "w")}
                 />
                 <div
+                  data-resize="e"
                   className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                   style={{
                     right: -6,
