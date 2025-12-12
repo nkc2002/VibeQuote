@@ -24,8 +24,6 @@ export interface CanvasRef {
   captureAsDataURL: () => Promise<string>;
 }
 
-type ResizeCorner = "se" | "sw" | "ne" | "nw" | null;
-
 const Canvas = forwardRef<CanvasRef, CanvasProps>(
   (
     {
