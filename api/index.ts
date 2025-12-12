@@ -491,6 +491,335 @@ app.get("/api/images/random", requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// Videos CRUD API
+// ============================================================
+
+// Video document interface
+interface VideoDocument {
+  _id?: ObjectId;
+  userId: string;
+  thumbnail?: string;
+  quoteText: string;
+  authorText?: string;
+  templateId?: string;
+  templateName?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textColor?: string;
+  boxOpacity?: number;
+  canvasWidth?: number;
+  canvasHeight?: number;
+  downloadCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Get all videos for current user
+app.get("/api/videos", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const db = await connectDB();
+    const videos = await db
+      .collection("videos")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json({
+      success: true,
+      data: videos.map((v: any) => ({
+        id: v._id.toString(),
+        thumbnail: v.thumbnail,
+        quoteText: v.quoteText,
+        authorText: v.authorText,
+        templateId: v.templateId,
+        templateName: v.templateName,
+        fontSize: v.fontSize,
+        fontFamily: v.fontFamily,
+        textColor: v.textColor,
+        boxOpacity: v.boxOpacity,
+        canvasWidth: v.canvasWidth,
+        canvasHeight: v.canvasHeight,
+        downloadCount: v.downloadCount || 0,
+        createdAt: v.createdAt,
+        updatedAt: v.updatedAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching videos:", error);
+    res.status(500).json({ error: "Failed to fetch videos" });
+  }
+});
+
+// Create a new video
+app.post("/api/videos", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const {
+      thumbnail,
+      quoteText,
+      authorText,
+      templateId,
+      templateName,
+      fontSize,
+      fontFamily,
+      textColor,
+      boxOpacity,
+      canvasWidth,
+      canvasHeight,
+    } = req.body;
+
+    if (!quoteText) {
+      return res.status(400).json({ error: "quoteText is required" });
+    }
+
+    const now = Date.now();
+    const videoDoc: VideoDocument = {
+      userId,
+      thumbnail: thumbnail || "",
+      quoteText,
+      authorText: authorText || "",
+      templateId: templateId || "center",
+      templateName: templateName || "Center",
+      fontSize: fontSize || 48,
+      fontFamily: fontFamily || "Inter, sans-serif",
+      textColor: textColor || "#FFFFFF",
+      boxOpacity: boxOpacity ?? 0.3,
+      canvasWidth: canvasWidth || 1080,
+      canvasHeight: canvasHeight || 1920,
+      downloadCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const db = await connectDB();
+    const result = await db.collection("videos").insertOne(videoDoc);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: result.insertedId.toString(),
+        ...videoDoc,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating video:", error);
+    res.status(500).json({ error: "Failed to create video" });
+  }
+});
+
+// Get video statistics
+app.get("/api/videos/stats/summary", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const db = await connectDB();
+
+    // Get all videos for user
+    const videos = await db.collection("videos").find({ userId }).toArray();
+
+    // Calculate stats
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTimestamp = today.getTime();
+
+    const totalVideos = videos.length;
+    const todayCount = videos.filter(
+      (v: any) => v.createdAt >= todayTimestamp
+    ).length;
+    const totalDownloads = videos.reduce(
+      (sum: number, v: any) => sum + (v.downloadCount || 0),
+      0
+    );
+
+    // Find most used template
+    const templateCounts: Record<string, number> = {};
+    videos.forEach((v: any) => {
+      const tpl = v.templateId || "center";
+      templateCounts[tpl] = (templateCounts[tpl] || 0) + 1;
+    });
+    const favoriteTemplate =
+      Object.entries(templateCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      null;
+
+    res.json({
+      success: true,
+      data: {
+        totalVideos,
+        todayCount,
+        totalDownloads,
+        favoriteTemplate,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching stats:", error);
+    res.status(500).json({ error: "Failed to fetch statistics" });
+  }
+});
+
+// Increment download count
+app.post("/api/videos/download/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const videoId = req.params.id;
+
+    if (!ObjectId.isValid(videoId)) {
+      return res.status(400).json({ error: "Invalid video ID" });
+    }
+
+    const db = await connectDB();
+    const result = await db
+      .collection("videos")
+      .findOneAndUpdate(
+        { _id: new ObjectId(videoId), userId },
+        { $inc: { downloadCount: 1 }, $set: { updatedAt: Date.now() } },
+        { returnDocument: "after" }
+      );
+
+    if (!result) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    res.json({
+      success: true,
+      downloadCount: result.downloadCount,
+    });
+  } catch (error) {
+    console.error("Error incrementing download:", error);
+    res.status(500).json({ error: "Failed to increment download count" });
+  }
+});
+
+// Get single video
+app.get("/api/videos/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const videoId = req.params.id;
+
+    if (!ObjectId.isValid(videoId)) {
+      return res.status(400).json({ error: "Invalid video ID" });
+    }
+
+    const db = await connectDB();
+    const video = await db.collection("videos").findOne({
+      _id: new ObjectId(videoId),
+      userId,
+    });
+
+    if (!video) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: video._id.toString(),
+        thumbnail: video.thumbnail,
+        quoteText: video.quoteText,
+        authorText: video.authorText,
+        templateId: video.templateId,
+        templateName: video.templateName,
+        fontSize: video.fontSize,
+        fontFamily: video.fontFamily,
+        textColor: video.textColor,
+        boxOpacity: video.boxOpacity,
+        canvasWidth: video.canvasWidth,
+        canvasHeight: video.canvasHeight,
+        downloadCount: video.downloadCount || 0,
+        createdAt: video.createdAt,
+        updatedAt: video.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching video:", error);
+    res.status(500).json({ error: "Failed to fetch video" });
+  }
+});
+
+// Update video
+app.put("/api/videos/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const videoId = req.params.id;
+
+    if (!ObjectId.isValid(videoId)) {
+      return res.status(400).json({ error: "Invalid video ID" });
+    }
+
+    const updateFields: Record<string, any> = { updatedAt: Date.now() };
+    const allowedFields = [
+      "thumbnail",
+      "quoteText",
+      "authorText",
+      "templateId",
+      "templateName",
+      "fontSize",
+      "fontFamily",
+      "textColor",
+      "boxOpacity",
+      "canvasWidth",
+      "canvasHeight",
+    ];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateFields[field] = req.body[field];
+      }
+    }
+
+    const db = await connectDB();
+    const result = await db
+      .collection("videos")
+      .findOneAndUpdate(
+        { _id: new ObjectId(videoId), userId },
+        { $set: updateFields },
+        { returnDocument: "after" }
+      );
+
+    if (!result) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: result._id.toString(),
+        ...result,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating video:", error);
+    res.status(500).json({ error: "Failed to update video" });
+  }
+});
+
+// Delete video
+app.delete("/api/videos/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const videoId = req.params.id;
+
+    if (!ObjectId.isValid(videoId)) {
+      return res.status(400).json({ error: "Invalid video ID" });
+    }
+
+    const db = await connectDB();
+    const result = await db.collection("videos").deleteOne({
+      _id: new ObjectId(videoId),
+      userId,
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    res.status(500).json({ error: "Failed to delete video" });
+  }
+});
+
+// ============================================================
 // Video Generation API
 // ============================================================
 
