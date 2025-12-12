@@ -6,7 +6,6 @@ import {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import html2canvas from "html2canvas";
 import { TextLayer } from "./types";
 
 interface CanvasProps {
@@ -53,11 +52,92 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
           throw new Error("Canvas element not found");
         }
 
-        const canvas = await html2canvas(canvasRef.current, {
-          useCORS: true,
-          allowTaint: true,
-          scale: 2, // Higher quality
-          backgroundColor: null,
+        const element = canvasRef.current;
+        const rect = element.getBoundingClientRect();
+
+        // Create offscreen canvas
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("Failed to get canvas context");
+        }
+
+        // Set canvas size (use 2x for better quality)
+        const scale = 2;
+        canvas.width = rect.width * scale;
+        canvas.height = rect.height * scale;
+        ctx.scale(scale, scale);
+
+        // Draw background
+        if (backgroundImage) {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () =>
+              reject(new Error("Failed to load background image"));
+            img.src = backgroundImage;
+          });
+
+          // Draw cover-fit image
+          const imgRatio = img.width / img.height;
+          const canvasRatio = rect.width / rect.height;
+          let drawWidth, drawHeight, drawX, drawY;
+
+          if (imgRatio > canvasRatio) {
+            drawHeight = rect.height;
+            drawWidth = drawHeight * imgRatio;
+            drawX = (rect.width - drawWidth) / 2;
+            drawY = 0;
+          } else {
+            drawWidth = rect.width;
+            drawHeight = drawWidth / imgRatio;
+            drawX = 0;
+            drawY = (rect.height - drawHeight) / 2;
+          }
+
+          ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        } else {
+          // Draw gradient background
+          ctx.fillStyle = "#1e293b";
+          ctx.fillRect(0, 0, rect.width, rect.height);
+        }
+
+        // Draw dark overlay
+        if (boxOpacity > 0) {
+          ctx.fillStyle = `rgba(0, 0, 0, ${boxOpacity})`;
+          ctx.fillRect(0, 0, rect.width, rect.height);
+        }
+
+        // Draw text layers
+        layers.forEach((layer) => {
+          const x = (layer.x / 100) * rect.width;
+          const y = (layer.y / 100) * rect.height;
+
+          ctx.save();
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = `${layer.fontSize}px ${layer.fontFamily}`;
+          ctx.fillStyle = layer.color;
+          ctx.globalAlpha = layer.opacity;
+
+          // Add text shadow
+          ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 2;
+
+          // Draw text (handle multiline)
+          const lines = layer.text.split("\n");
+          const lineHeight = layer.fontSize * 1.4;
+          const totalHeight = lines.length * lineHeight;
+          const startY = y - totalHeight / 2 + lineHeight / 2;
+
+          lines.forEach((line, index) => {
+            ctx.fillText(line, x, startY + index * lineHeight);
+          });
+
+          ctx.restore();
         });
 
         return canvas.toDataURL("image/jpeg", 0.9);
