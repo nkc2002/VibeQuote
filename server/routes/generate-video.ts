@@ -445,7 +445,7 @@ router.post("/", async (req: Request, res: Response) => {
         input: {
           text: wrappedText.substring(0, 500),
           template,
-          styleParams,
+          styleParams: styleParams as Record<string, unknown>,
         },
         createdAt: new Date(),
         size: videoSize,
