@@ -176,6 +176,9 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const handleMouseDown = useCallback(
       (e: React.MouseEvent, layerId: string) => {
         if (isPreviewMode) return;
+        // Don't start drag if we're resizing
+        if (resizing) return;
+
         e.preventDefault();
         e.stopPropagation();
 
@@ -183,7 +186,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         onSelectLayer(layerId);
         setDragStart({ x: e.clientX, y: e.clientY });
       },
-      [isPreviewMode, onSelectLayer]
+      [isPreviewMode, onSelectLayer, resizing]
     );
 
     // Handle mouse move
