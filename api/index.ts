@@ -682,31 +682,56 @@ app.post("/api/videos/download/:id", requireAuth, async (req, res) => {
     const userId = (req as any).userId;
     const videoId = req.params.id;
 
-    console.log(`[Download] Incrementing for video ${videoId} user ${userId}`);
+    console.log(
+      `[Download] Starting increment for video ${videoId}, user ${userId}`
+    );
 
     if (!ObjectId.isValid(videoId)) {
       return res.status(400).json({ error: "Invalid video ID" });
     }
 
     const db = await connectDB();
-    const result = await db
-      .collection("videos")
-      .findOneAndUpdate(
-        { _id: new ObjectId(videoId), userId },
-        { $inc: { downloadCount: 1 }, $set: { updatedAt: Date.now() } },
-        { returnDocument: "after" }
-      );
+    const collection = db.collection("videos");
 
-    if (!result) {
-      console.log(`[Download] Video not found or not owned by user`);
+    // 1. Find the video specifically for this user
+    const video = await collection.findOne({
+      _id: new ObjectId(videoId),
+      userId,
+    });
+
+    if (!video) {
+      console.error(`[Download] Video not found or ownership mismatch`);
       return res.status(404).json({ error: "Video not found" });
     }
 
-    console.log(`[Download] New count: ${result.downloadCount}`);
+    // 2. Calculate new count manually
+    const currentCount = video.downloadCount || 0;
+    const newCount = currentCount + 1;
+    console.log(
+      `[Download] Current count: ${currentCount}, New count: ${newCount}`
+    );
+
+    // 3. Update explicitly
+    const updateResult = await collection.updateOne(
+      { _id: new ObjectId(videoId) },
+      {
+        $set: {
+          downloadCount: newCount,
+          updatedAt: Date.now(),
+        },
+      }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      console.error(`[Download] Failed to update document`);
+      return res.status(500).json({ error: "Failed to update download count" });
+    }
+
+    console.log(`[Download] Successfully updated count to ${newCount}`);
 
     res.json({
       success: true,
-      downloadCount: result.downloadCount,
+      downloadCount: newCount,
     });
   } catch (error) {
     console.error("Error incrementing download:", error);
