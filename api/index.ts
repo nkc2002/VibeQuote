@@ -661,12 +661,16 @@ app.get("/api/videos/stats/summary", requireAuth, async (req, res) => {
       Object.entries(templateCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
       null;
 
+    console.log(
+      `[Stats] totals - videos:${totalVideos}, today:${todayCount}, downloads:${totalDownloads}`
+    );
+
     res.json({
       success: true,
       data: {
-        totalVideos,
-        todayCount,
-        totalDownloads,
+        total: totalVideos,
+        today: todayCount,
+        downloadCount: totalDownloads,
         favoriteTemplate,
       },
     });
