@@ -17,7 +17,6 @@ import {
   ImageSearchParams,
   searchImages,
   getRandomImage,
-  ORIENTATION_OPTIONS,
   COLOR_OPTIONS,
   POPULAR_QUERIES,
 } from "./types";
@@ -732,10 +731,22 @@ const getMockImages = (): UnsplashImage[] => [
     width: 1920,
     height: 1280,
     color: "#2B3D4F",
+    blur_hash: "LNF5?;01IUt7~qt7ozof9GWBoffQ",
     alt_description: "Green mountain landscape",
     description: "Beautiful mountain scenery",
-    user: { name: "Photographer", username: "photo" },
-    links: { html: "https://unsplash.com" },
+    user: {
+      name: "Photographer",
+      username: "photo",
+      profile_image: {
+        small:
+          "https://images.unsplash.com/placeholder-avatars/extra-large.jpg",
+      },
+      links: { html: "https://unsplash.com/@photo" },
+    },
+    links: {
+      html: "https://unsplash.com",
+      download: "https://unsplash.com/photos/mock-1/download",
+    },
   },
   {
     id: "mock-2",
@@ -752,10 +763,22 @@ const getMockImages = (): UnsplashImage[] => [
     width: 1920,
     height: 1280,
     color: "#F5E6D3",
+    blur_hash: "LNF5?;01IUt7~qt7ozof9GWBoffQ",
     alt_description: "Tropical beach",
     description: "Sandy beach with palm trees",
-    user: { name: "Beach Lover", username: "beach" },
-    links: { html: "https://unsplash.com" },
+    user: {
+      name: "Beach Lover",
+      username: "beach",
+      profile_image: {
+        small:
+          "https://images.unsplash.com/placeholder-avatars/extra-large.jpg",
+      },
+      links: { html: "https://unsplash.com/@beach" },
+    },
+    links: {
+      html: "https://unsplash.com",
+      download: "https://unsplash.com/photos/mock-2/download",
+    },
   },
   {
     id: "mock-3",
@@ -770,10 +793,22 @@ const getMockImages = (): UnsplashImage[] => [
     width: 1920,
     height: 1080,
     color: "#667eea",
+    blur_hash: "LNF5?;01IUt7~qt7ozof9GWBoffQ",
     alt_description: "Purple gradient",
     description: "Abstract gradient background",
-    user: { name: "Designer", username: "design" },
-    links: { html: "https://unsplash.com" },
+    user: {
+      name: "Designer",
+      username: "design",
+      profile_image: {
+        small:
+          "https://images.unsplash.com/placeholder-avatars/extra-large.jpg",
+      },
+      links: { html: "https://unsplash.com/@design" },
+    },
+    links: {
+      html: "https://unsplash.com",
+      download: "https://unsplash.com/photos/mock-3/download",
+    },
   },
   {
     id: "mock-4",
@@ -790,10 +825,22 @@ const getMockImages = (): UnsplashImage[] => [
     width: 1920,
     height: 1280,
     color: "#1E3A5F",
+    blur_hash: "LNF5?;01IUt7~qt7ozof9GWBoffQ",
     alt_description: "Ocean waves",
     description: "Deep blue ocean",
-    user: { name: "Ocean Fan", username: "ocean" },
-    links: { html: "https://unsplash.com" },
+    user: {
+      name: "Ocean Fan",
+      username: "ocean",
+      profile_image: {
+        small:
+          "https://images.unsplash.com/placeholder-avatars/extra-large.jpg",
+      },
+      links: { html: "https://unsplash.com/@ocean" },
+    },
+    links: {
+      html: "https://unsplash.com",
+      download: "https://unsplash.com/photos/mock-4/download",
+    },
   },
   {
     id: "mock-5",
@@ -810,10 +857,22 @@ const getMockImages = (): UnsplashImage[] => [
     width: 1920,
     height: 1280,
     color: "#FF6B35",
+    blur_hash: "LNF5?;01IUt7~qt7ozof9GWBoffQ",
     alt_description: "Orange flowers",
     description: "Bright orange flowers",
-    user: { name: "Flower Lover", username: "flower" },
-    links: { html: "https://unsplash.com" },
+    user: {
+      name: "Flower Lover",
+      username: "flower",
+      profile_image: {
+        small:
+          "https://images.unsplash.com/placeholder-avatars/extra-large.jpg",
+      },
+      links: { html: "https://unsplash.com/@flower" },
+    },
+    links: {
+      html: "https://unsplash.com",
+      download: "https://unsplash.com/photos/mock-5/download",
+    },
   },
   {
     id: "mock-6",
@@ -830,10 +889,22 @@ const getMockImages = (): UnsplashImage[] => [
     width: 1920,
     height: 1280,
     color: "#FFEAA7",
+    blur_hash: "LNF5?;01IUt7~qt7ozof9GWBoffQ",
     alt_description: "Yellow sunflower field",
     description: "Bright sunflower field",
-    user: { name: "Nature Lover", username: "nature" },
-    links: { html: "https://unsplash.com" },
+    user: {
+      name: "Nature Lover",
+      username: "nature",
+      profile_image: {
+        small:
+          "https://images.unsplash.com/placeholder-avatars/extra-large.jpg",
+      },
+      links: { html: "https://unsplash.com/@nature" },
+    },
+    links: {
+      html: "https://unsplash.com",
+      download: "https://unsplash.com/photos/mock-6/download",
+    },
   },
 ];
 
