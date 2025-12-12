@@ -524,32 +524,47 @@ app.post("/api/generate-low-quality-video", requireAuth, async (req, res) => {
   const outputPath = "/tmp/out.mp4";
 
   try {
-    const { quote, imageUrl } = req.body;
+    const { imageDataUrl, imageUrl, quote } = req.body;
 
-    // Validate input
-    if (!quote || typeof quote !== "string") {
+    // Accept either imageDataUrl (base64 from canvas) or imageUrl (URL)
+    let imageBuffer: Buffer;
+
+    if (
+      imageDataUrl &&
+      typeof imageDataUrl === "string" &&
+      imageDataUrl.startsWith("data:")
+    ) {
+      // Handle base64 data URL (from canvas capture)
+      console.log("[LQ Video] Using base64 image from canvas");
+      const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
+      imageBuffer = Buffer.from(base64Data, "base64");
+    } else if (imageUrl && typeof imageUrl === "string") {
+      // Handle URL (fallback for backward compatibility)
+      console.log("[LQ Video] Downloading image from URL...");
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image: ${imageResponse.status}`);
+      }
+      imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+    } else {
       return res
         .status(400)
-        .json({ error: "Missing or invalid 'quote' field" });
-    }
-    if (!imageUrl || typeof imageUrl !== "string") {
-      return res
-        .status(400)
-        .json({ error: "Missing or invalid 'imageUrl' field" });
+        .json({ error: "Missing 'imageDataUrl' or 'imageUrl' field" });
     }
 
-    console.log("[LQ Video] Starting generation...");
-    console.log("[LQ Video] Quote:", quote.substring(0, 50) + "...");
-
-    // Step 1: Download image
-    console.log("[LQ Video] Downloading image...");
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image: ${imageResponse.status}`);
+    console.log("[LQ Video] Starting video generation...");
+    if (quote) {
+      console.log("[LQ Video] Quote:", String(quote).substring(0, 50) + "...");
     }
-    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+
+    // Save image to temp file
     writeFileSync(bgPath, imageBuffer);
-    console.log("[LQ Video] Image saved to", bgPath);
+    console.log(
+      "[LQ Video] Image saved to",
+      bgPath,
+      "size:",
+      imageBuffer.length
+    );
 
     // Step 2: Build FFmpeg command
     const ffmpegPath = getFFmpegPath();

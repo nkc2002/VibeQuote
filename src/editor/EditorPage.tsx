@@ -1,14 +1,15 @@
-import { useReducer, useEffect, useCallback } from "react";
+import { useReducer, useEffect, useCallback, useRef } from "react";
 import { initialEditorState } from "./types";
 import { editorReducer } from "./reducer";
 import Toolbar from "./Toolbar";
 import QuotePanel from "./QuotePanel";
-import Canvas from "./Canvas";
+import Canvas, { CanvasRef } from "./Canvas";
 import StylePanel from "./StylePanel";
 import { videosApi } from "../api";
 
 const EditorPage = () => {
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
+  const canvasComponentRef = useRef<CanvasRef>(null);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -78,27 +79,29 @@ const EditorPage = () => {
       return;
     }
 
+    if (!canvasComponentRef.current) {
+      alert("Canvas không sẵn sàng. Vui lòng thử lại.");
+      return;
+    }
+
     dispatch({ type: "SET_GENERATING", payload: true });
 
     try {
-      // Build the quote text with author
-      const quoteWithAuthor =
-        state.quoteText + (state.authorText ? `\n\n— ${state.authorText}` : "");
+      // Capture the canvas as a data URL (includes background + text)
+      console.log("[Generate] Capturing canvas...");
+      const imageDataUrl = await canvasComponentRef.current.captureAsDataURL();
+      console.log("[Generate] Canvas captured, size:", imageDataUrl.length);
 
-      // Use low-quality endpoint for cloud deployment
-      // Simplified payload for faster generation
-      const renderPayload = {
-        quote: quoteWithAuthor,
-        imageUrl: state.backgroundImage,
-      };
-
+      // Send captured image to API
       const response = await fetch("/api/generate-low-quality-video", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(renderPayload),
+        body: JSON.stringify({
+          imageDataUrl, // Base64 image with text baked in
+        }),
       });
 
       if (!response.ok) {
@@ -223,6 +226,7 @@ const EditorPage = () => {
         >
           <div className="w-full max-w-5xl">
             <Canvas
+              ref={canvasComponentRef}
               layers={state.layers}
               backgroundImage={state.backgroundImage}
               backgroundGradient={state.backgroundGradient}
