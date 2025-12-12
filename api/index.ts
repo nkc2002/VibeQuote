@@ -494,27 +494,248 @@ app.get("/api/images/random", requireAuth, async (req, res) => {
 // Video Generation API
 // ============================================================
 
-// Video generation is NOT available on Vercel serverless
-// because FFmpeg is not installed. Users need to run local server.
-app.post("/api/render-video", requireAuth, async (_req, res) => {
+import { spawn } from "child_process";
+import { createReadStream, unlinkSync, existsSync, writeFileSync } from "fs";
+import ffmpegStatic from "ffmpeg-static";
+
+// Get FFmpeg path from ffmpeg-static
+const getFFmpegPath = (): string => {
+  if (ffmpegStatic) {
+    return ffmpegStatic as unknown as string;
+  }
+  return "ffmpeg"; // Fallback
+};
+
+/**
+ * Sanitize text for FFmpeg drawtext filter
+ * Escapes: ' " \ % : ,
+ */
+function sanitizeText(text: string): string {
+  return text
+    .replace(/\\/g, "\\\\\\\\") // Backslash
+    .replace(/'/g, "'\\''") // Single quote
+    .replace(/"/g, '\\"') // Double quote
+    .replace(/:/g, "\\:") // Colon
+    .replace(/%/g, "\\%") // Percent
+    .replace(/,/g, "\\,"); // Comma
+}
+
+/**
+ * POST /api/generate-low-quality-video
+ *
+ * Generates a low-quality 3-5 second video optimized for Vercel serverless.
+ *
+ * Input:
+ * {
+ *   "quote": "Your quote text here",
+ *   "imageUrl": "https://images.unsplash.com/photo-xxxx"
+ * }
+ *
+ * Output: MP4 video stream
+ */
+app.post("/api/generate-low-quality-video", requireAuth, async (req, res) => {
+  const bgPath = "/tmp/bg.jpg";
+  const outputPath = "/tmp/out.mp4";
+
+  try {
+    const { quote, imageUrl } = req.body;
+
+    // Validate input
+    if (!quote || typeof quote !== "string") {
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid 'quote' field" });
+    }
+    if (!imageUrl || typeof imageUrl !== "string") {
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid 'imageUrl' field" });
+    }
+
+    console.log("[LQ Video] Starting generation...");
+    console.log("[LQ Video] Quote:", quote.substring(0, 50) + "...");
+
+    // Step 1: Download image
+    console.log("[LQ Video] Downloading image...");
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download image: ${imageResponse.status}`);
+    }
+    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+    writeFileSync(bgPath, imageBuffer);
+    console.log("[LQ Video] Image saved to", bgPath);
+
+    // Step 2: Sanitize text for FFmpeg
+    const sanitizedQuote = sanitizeText(quote);
+
+    // Step 3: Build FFmpeg command
+    const ffmpegPath = getFFmpegPath();
+    console.log("[LQ Video] FFmpeg path:", ffmpegPath);
+
+    // Video settings optimized for Vercel:
+    // - 480p resolution (scale=480:-2 maintains aspect ratio)
+    // - 12 fps (low frame rate)
+    // - crf=35 (high compression, lower quality)
+    // - ultrafast preset (fastest encoding)
+    // - 3 second duration
+    const duration = 3;
+    const fontSize = 24;
+
+    // Filter: scale to 480p, add centered white text
+    const filterComplex = [
+      `scale=480:-2`,
+      `drawtext=text='${sanitizedQuote}':fontsize=${fontSize}:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2`,
+    ].join(",");
+
+    const ffmpegArgs = [
+      "-y", // Overwrite output
+      "-loop",
+      "1", // Loop single image
+      "-i",
+      bgPath, // Input image
+      "-vf",
+      filterComplex, // Video filters
+      "-c:v",
+      "libx264", // H.264 codec
+      "-preset",
+      "ultrafast", // Fastest encoding
+      "-crf",
+      "35", // High compression
+      "-r",
+      "12", // 12 fps
+      "-t",
+      String(duration), // Duration
+      "-pix_fmt",
+      "yuv420p", // Pixel format for compatibility
+      "-movflags",
+      "+faststart", // Enable streaming
+      "-an", // No audio
+      outputPath, // Output file
+    ];
+
+    console.log("[LQ Video] Running FFmpeg...");
+
+    // Step 4: Run FFmpeg
+    await new Promise<void>((resolve, reject) => {
+      const ffmpeg = spawn(ffmpegPath, ffmpegArgs, {
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+
+      let stderr = "";
+
+      ffmpeg.stderr?.on("data", (data) => {
+        stderr += data.toString();
+      });
+
+      ffmpeg.on("close", (code) => {
+        if (code === 0) {
+          console.log("[LQ Video] FFmpeg completed successfully");
+          resolve();
+        } else {
+          console.error("[LQ Video] FFmpeg stderr:", stderr);
+          reject(
+            new Error(`FFmpeg exited with code ${code}: ${stderr.slice(-500)}`)
+          );
+        }
+      });
+
+      ffmpeg.on("error", (err) => {
+        console.error("[LQ Video] FFmpeg spawn error:", err);
+        reject(err);
+      });
+
+      // Timeout after 50 seconds (leave buffer for Vercel's 60s limit)
+      setTimeout(() => {
+        ffmpeg.kill("SIGKILL");
+        reject(new Error("FFmpeg timeout after 50 seconds"));
+      }, 50000);
+    });
+
+    // Step 5: Check output file exists
+    if (!existsSync(outputPath)) {
+      throw new Error("FFmpeg did not produce output file");
+    }
+
+    console.log("[LQ Video] Video generated, streaming to client...");
+
+    // Step 6: Stream video to client
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="quote-video.mp4"'
+    );
+
+    const stream = createReadStream(outputPath);
+    stream.pipe(res);
+
+    stream.on("end", () => {
+      console.log("[LQ Video] Stream completed");
+      // Cleanup in finally block
+    });
+
+    stream.on("error", (err) => {
+      console.error("[LQ Video] Stream error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to stream video" });
+      }
+    });
+  } catch (error) {
+    console.error("[LQ Video] Error:", error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Video generation failed",
+        message: (error as Error).message,
+      });
+    }
+  } finally {
+    // Cleanup: delete temp files
+    try {
+      if (existsSync(bgPath)) {
+        unlinkSync(bgPath);
+        console.log("[LQ Video] Cleaned up", bgPath);
+      }
+    } catch (e) {
+      console.warn("[LQ Video] Failed to cleanup bgPath:", e);
+    }
+
+    // Note: Don't delete outputPath immediately as stream may still be reading
+    // Use setTimeout to cleanup after stream should be done
+    setTimeout(() => {
+      try {
+        if (existsSync(outputPath)) {
+          unlinkSync(outputPath);
+          console.log("[LQ Video] Cleaned up", outputPath);
+        }
+      } catch (e) {
+        console.warn("[LQ Video] Failed to cleanup outputPath:", e);
+      }
+    }, 10000); // Wait 10 seconds before cleanup
+  }
+});
+
+// Fallback for old endpoints - redirect to new low-quality endpoint
+app.post("/api/render-video", requireAuth, async (req, res) => {
+  // Forward to low-quality endpoint
+  const { wrappedText, backgroundImageUrl } = req.body;
+  if (wrappedText && backgroundImageUrl) {
+    req.body.quote = wrappedText;
+    req.body.imageUrl = backgroundImageUrl;
+  }
+
   res.status(503).json({
-    error: "Video generation not available",
+    error: "Use /api/generate-low-quality-video instead",
     message:
-      "Tính năng tạo video không khả dụng trên cloud version. Vui lòng chạy local server để sử dụng tính năng này.",
-    details:
-      "FFmpeg không có sẵn trên Vercel serverless. Chạy 'npm run dev:server' trên máy local để tạo video.",
-    code: "FFMPEG_NOT_AVAILABLE",
+      "Endpoint đã được thay thế bằng /api/generate-low-quality-video với cấu hình tối ưu cho cloud.",
   });
 });
 
 app.post("/api/generate-video", requireAuth, async (_req, res) => {
   res.status(503).json({
-    error: "Video generation not available",
+    error: "Use /api/generate-low-quality-video instead",
     message:
-      "Tính năng tạo video không khả dụng trên cloud version. Vui lòng chạy local server để sử dụng tính năng này.",
-    details:
-      "FFmpeg không có sẵn trên Vercel serverless. Chạy 'npm run dev:server' trên máy local để tạo video.",
-    code: "FFMPEG_NOT_AVAILABLE",
+      "Endpoint đã được thay thế bằng /api/generate-low-quality-video với cấu hình tối ưu cho cloud.",
   });
 });
 
