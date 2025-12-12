@@ -303,6 +303,193 @@ app.post("/api/auth/logout", (_req, res) => {
   });
 });
 
+// ============================================================
+// Images API (Unsplash)
+// ============================================================
+
+// Auth middleware for images
+const requireAuth = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  const token = req.cookies?.[COOKIE_NAME];
+  if (!token) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  try {
+    jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+// Search images
+app.get("/api/images/search", requireAuth, async (req, res) => {
+  try {
+    const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+    if (!accessKey) {
+      return res.status(500).json({
+        error: "Image search service not configured",
+        message: "UNSPLASH_ACCESS_KEY is missing",
+      });
+    }
+
+    const query = String(req.query.q || req.query.query || "")
+      .trim()
+      .substring(0, 100);
+    const page = Math.max(
+      1,
+      Math.min(100, parseInt(String(req.query.page)) || 1)
+    );
+    const perPage = Math.max(
+      1,
+      Math.min(30, parseInt(String(req.query.per_page)) || 20)
+    );
+    const orientation = String(req.query.orientation || "");
+    const color = String(req.query.color || "");
+
+    if (!query) {
+      return res.status(400).json({
+        error: "Missing search query",
+        message: "Please provide a search query",
+      });
+    }
+
+    const unsplashUrl = new URL("https://api.unsplash.com/search/photos");
+    unsplashUrl.searchParams.set("query", query);
+    unsplashUrl.searchParams.set("page", page.toString());
+    unsplashUrl.searchParams.set("per_page", perPage.toString());
+
+    if (
+      orientation &&
+      ["landscape", "portrait", "squarish"].includes(orientation)
+    ) {
+      unsplashUrl.searchParams.set("orientation", orientation);
+    }
+    if (color) {
+      unsplashUrl.searchParams.set("color", color);
+    }
+
+    const response = await fetch(unsplashUrl.toString(), {
+      headers: {
+        Authorization: `Client-ID ${accessKey}`,
+        "Accept-Version": "v1",
+      },
+    });
+
+    if (response.status === 429) {
+      return res.status(429).json({
+        error: "Too many requests",
+        message: "Rate limited. Please try again later.",
+      });
+    }
+
+    if (!response.ok) {
+      console.error("Unsplash API error:", response.status);
+      return res.status(502).json({
+        error: "Image search failed",
+        message: "Unable to fetch images",
+      });
+    }
+
+    const data = await response.json();
+
+    // Transform to our format
+    const results = data.results.map((photo: any) => ({
+      id: photo.id,
+      urls: photo.urls,
+      width: photo.width || 1920,
+      height: photo.height || 1080,
+      color: photo.color || "#000000",
+      blur_hash: photo.blur_hash || "",
+      description: photo.description || null,
+      alt_description: photo.alt_description || null,
+      user: {
+        name: photo.user.name,
+        username: photo.user.username,
+        profile_image: photo.user.profile_image || { small: "" },
+        links: photo.user.links,
+      },
+      links: {
+        html: photo.links?.html || "",
+        download: photo.links?.download_location || "",
+      },
+    }));
+
+    res.json({
+      results,
+      total: data.total,
+      total_pages: data.total_pages,
+    });
+  } catch (error) {
+    console.error("Image search error:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      message: "Image search failed",
+    });
+  }
+});
+
+// Random image
+app.get("/api/images/random", requireAuth, async (req, res) => {
+  try {
+    const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+    if (!accessKey) {
+      return res
+        .status(500)
+        .json({ error: "Image search service not configured" });
+    }
+
+    const query = String(req.query.query || "").trim();
+    const unsplashUrl = new URL("https://api.unsplash.com/photos/random");
+
+    if (query) {
+      unsplashUrl.searchParams.set("query", query);
+    }
+    unsplashUrl.searchParams.set("orientation", "landscape");
+
+    const response = await fetch(unsplashUrl.toString(), {
+      headers: {
+        Authorization: `Client-ID ${accessKey}`,
+        "Accept-Version": "v1",
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(502).json({ error: "Failed to fetch random image" });
+    }
+
+    const photo: any = await response.json();
+
+    res.json({
+      id: photo.id,
+      urls: photo.urls,
+      width: photo.width || 1920,
+      height: photo.height || 1080,
+      color: photo.color || "#000000",
+      blur_hash: photo.blur_hash || "",
+      description: photo.description || null,
+      alt_description: photo.alt_description || null,
+      user: {
+        name: photo.user.name,
+        username: photo.user.username,
+        profile_image: photo.user.profile_image || { small: "" },
+        links: photo.user.links,
+      },
+      links: {
+        html: photo.links?.html || "",
+        download: photo.links?.download_location || "",
+      },
+    });
+  } catch (error) {
+    console.error("Random image error:", error);
+    res.status(500).json({ error: "Failed to fetch random image" });
+  }
+});
+
 // 404 handler
 app.use("/api/*", (req, res) => {
   res.status(404).json({
