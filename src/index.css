@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  font-family: "Manrope", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom utility classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Glass effect card */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl;
+  }
+
+  .glass-card-dark {
+    @apply bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  /* Aurora gradient background */
+  .aurora-bg {
+    background: linear-gradient(
+      135deg,
+      #667eea 0%,
+      #764ba2 25%,
+      #f093fb 50%,
+      #f5576c 75%,
+      #4facfe 100%
+    );
+    background-size: 300% 300%;
+    animation: gradient 8s ease infinite;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-500 via-cta-500 to-secondary-500;
+  }
+
+  /* CTA button styles */
+  .btn-cta {
+    @apply inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-white 
+           bg-gradient-to-r from-cta-500 to-cta-600 rounded-full
+           shadow-lg shadow-cta-500/30
+           hover:shadow-xl hover:shadow-cta-500/40 hover:scale-[1.02]
+           focus:outline-none focus:ring-4 focus:ring-cta-500/50
+           transition-all duration-300 ease-out
+           cursor-pointer;
+  }
+
+  .btn-cta:active {
+    @apply scale-[0.98];
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 text-base font-medium
+           text-primary-600 bg-white border-2 border-primary-200 rounded-full
+           hover:bg-primary-50 hover:border-primary-300
+           focus:outline-none focus:ring-4 focus:ring-primary-500/20
+           transition-all duration-200 ease-out
+           cursor-pointer;
+  }
+
+  /* Feature card */
+  .feature-card {
+    @apply p-8 rounded-2xl bg-white/90 backdrop-blur-sm border border-slate-100
+           shadow-lg hover:shadow-xl hover:-translate-y-1
+           transition-all duration-300 ease-out cursor-pointer;
+  }
+
+  /* Section padding */
+  .section-padding {
+    @apply py-20 md:py-28 lg:py-32;
+  }
+
+  /* Container */
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Focus visible styles for accessibility */
+:focus-visible {
+  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-400;
+}
+
+/* Page transition animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-transition {
+  animation: fadeInUp 0.35s ease-out forwards;
+}
+
+.page-fade {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .page-transition,
+  .page-fade {
+    animation: none;
+  }
+}
