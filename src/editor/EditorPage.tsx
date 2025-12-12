@@ -67,6 +67,10 @@ const EditorPage = () => {
     dispatch({ type: "MOVE_LAYER", payload: { id, x, y } });
   }, []);
 
+  const handleResizeLayer = useCallback((id: string, newFontSize: number) => {
+    dispatch({ type: "RESIZE_LAYER", payload: { id, fontSize: newFontSize } });
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     // Validation
     if (!state.backgroundImage) {
@@ -235,6 +239,7 @@ const EditorPage = () => {
               isPreviewMode={state.isPreviewMode}
               onSelectLayer={handleSelectLayer}
               onMoveLayer={handleMoveLayer}
+              onResizeLayer={handleResizeLayer}
             />
 
             {/* Canvas info */}

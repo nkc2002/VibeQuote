@@ -17,11 +17,14 @@ interface CanvasProps {
   isPreviewMode: boolean;
   onSelectLayer: (id: string | null) => void;
   onMoveLayer: (id: string, x: number, y: number) => void;
+  onResizeLayer?: (id: string, newFontSize: number) => void;
 }
 
 export interface CanvasRef {
   captureAsDataURL: () => Promise<string>;
 }
+
+type ResizeCorner = "se" | "sw" | "ne" | "nw" | null;
 
 const Canvas = forwardRef<CanvasRef, CanvasProps>(
   (
@@ -34,6 +37,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       isPreviewMode,
       onSelectLayer,
       onMoveLayer,
+      onResizeLayer,
     },
     ref
   ) => {
@@ -44,6 +48,16 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       horizontal: false,
       vertical: false,
     });
+
+    // Resize state
+    const [resizing, setResizing] = useState<string | null>(null);
+    const [resizeStart, setResizeStart] = useState<{
+      mouseX: number;
+      mouseY: number;
+      fontSize: number;
+      layerX: number;
+      layerY: number;
+    } | null>(null);
 
     // Expose captureAsDataURL method to parent via ref
     useImperativeHandle(ref, () => ({
@@ -211,6 +225,85 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       };
     }, [dragging, dragStart, layers, onMoveLayer]);
 
+    // Handle resize mouse events
+    useEffect(() => {
+      if (!resizing || !resizeStart || !canvasRef.current || !onResizeLayer)
+        return;
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const layer = layers.find((l) => l.id === resizing);
+        if (!layer) return;
+
+        // Calculate layer center in pixels
+        const centerX = (layer.x / 100) * rect.width;
+        const centerY = (layer.y / 100) * rect.height;
+
+        // Calculate distance from center to current mouse position
+        const currentDistance = Math.sqrt(
+          Math.pow(e.clientX - rect.left - centerX, 2) +
+            Math.pow(e.clientY - rect.top - centerY, 2)
+        );
+
+        // Calculate initial distance from center to start mouse position
+        const startDistance = Math.sqrt(
+          Math.pow(resizeStart.mouseX - rect.left - centerX, 2) +
+            Math.pow(resizeStart.mouseY - rect.top - centerY, 2)
+        );
+
+        if (startDistance === 0) return;
+
+        // Scale factor based on distance change
+        const scaleFactor = currentDistance / startDistance;
+
+        // Calculate new font size
+        let newFontSize = Math.round(resizeStart.fontSize * scaleFactor);
+
+        // Clamp between 12px and 200px
+        newFontSize = Math.max(12, Math.min(200, newFontSize));
+
+        onResizeLayer(resizing, newFontSize);
+      };
+
+      const handleMouseUp = () => {
+        setResizing(null);
+        setResizeStart(null);
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }, [resizing, resizeStart, layers, onResizeLayer]);
+
+    // Handle resize start
+    const handleResizeMouseDown = useCallback(
+      (e: React.MouseEvent, layerId: string) => {
+        if (isPreviewMode || !onResizeLayer) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const layer = layers.find((l) => l.id === layerId);
+        if (!layer) return;
+
+        setResizing(layerId);
+        setResizeStart({
+          mouseX: e.clientX,
+          mouseY: e.clientY,
+          fontSize: layer.fontSize,
+          layerX: layer.x,
+          layerY: layer.y,
+        });
+      },
+      [isPreviewMode, layers, onResizeLayer]
+    );
+
     // Handle keyboard nudge
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -339,6 +432,40 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
             }}
           >
             {layer.text}
+
+            {/* Resize handles - only show on selected layer when not in preview mode */}
+            {layer.isSelected && !isPreviewMode && onResizeLayer && (
+              <>
+                {/* SE corner (bottom-right) */}
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 transition-colors"
+                  style={{ bottom: -6, right: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                  aria-label="Resize handle bottom-right"
+                />
+                {/* SW corner (bottom-left) */}
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 transition-colors"
+                  style={{ bottom: -6, left: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                  aria-label="Resize handle bottom-left"
+                />
+                {/* NE corner (top-right) */}
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 transition-colors"
+                  style={{ top: -6, right: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                  aria-label="Resize handle top-right"
+                />
+                {/* NW corner (top-left) */}
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 transition-colors"
+                  style={{ top: -6, left: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                  aria-label="Resize handle top-left"
+                />
+              </>
+            )}
           </div>
         ))}
 

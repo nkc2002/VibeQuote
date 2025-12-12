@@ -71,6 +71,7 @@ export type EditorAction =
   | { type: "MOVE_LAYER"; payload: { id: string; x: number; y: number } }
   | { type: "ADD_LAYER"; payload: TextLayer }
   | { type: "UPDATE_LAYER"; payload: Partial<TextLayer> & { id: string } }
+  | { type: "RESIZE_LAYER"; payload: { id: string; fontSize: number } }
   | { type: "DELETE_LAYER"; payload: string }
   | { type: "UNDO" }
   | { type: "REDO" }

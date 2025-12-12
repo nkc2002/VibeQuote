@@ -199,6 +199,18 @@ export function editorReducer(
       };
     }
 
+    case "RESIZE_LAYER": {
+      // Update specific layer's fontSize (no history during drag - history saved on mouse up)
+      return {
+        ...state,
+        layers: state.layers.map((layer) =>
+          layer.id === action.payload.id
+            ? { ...layer, fontSize: action.payload.fontSize }
+            : layer
+        ),
+      };
+    }
+
     case "DELETE_LAYER": {
       const newHistory = [
         ...state.history.slice(0, state.historyIndex + 1),
