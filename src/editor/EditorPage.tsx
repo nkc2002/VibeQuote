@@ -81,52 +81,23 @@ const EditorPage = () => {
     dispatch({ type: "SET_GENERATING", payload: true });
 
     try {
-      // Build the wrappedText with quote and author
+      // Build the quote text with author
       const quoteWithAuthor =
         state.quoteText + (state.authorText ? `\n\n— ${state.authorText}` : "");
 
-      // Build Canvas-matching payload for precise video rendering
+      // Use low-quality endpoint for cloud deployment
+      // Simplified payload for faster generation
       const renderPayload = {
-        quote: state.quoteText,
-        wrappedText: quoteWithAuthor,
-        canvasWidth: state.canvasWidth,
-        canvasHeight: state.canvasHeight,
-        fontFamily: state.fontFamily.split(",")[0].trim(), // Get first font name
-        fontSize: state.fontSize,
-        fontColor: `rgba(${hexToRgb(state.textColor)},1)`,
-        textAlign: "center" as const,
-        textBox: {
-          // Center for 'center' template, bottom for 'bottom' template
-          x: state.canvasWidth / 2,
-          y:
-            state.template === "center"
-              ? state.canvasHeight / 2
-              : state.canvasHeight * 0.75,
-        },
-        backgroundImageUrl: state.backgroundImage,
-        backgroundBrightness: 1 - state.boxOpacity, // Convert overlay opacity to brightness
-        backgroundBlur: 0,
-        gradientOverlay: {
-          enabled: state.boxOpacity > 0,
-          direction: "top-bottom" as const,
-          startColor: `rgba(0,0,0,${state.boxOpacity})`,
-          endColor: `rgba(0,0,0,${state.boxOpacity * 0.5})`,
-        },
-        animation: {
-          type: "subtle-zoom" as const,
-          zoomStart: 1.05,
-          zoomEnd: 1.0,
-          fadeText: true,
-          fadeDuration: 0.8,
-        },
-        duration: 6,
+        quote: quoteWithAuthor,
+        imageUrl: state.backgroundImage,
       };
 
-      const response = await fetch("/api/render-video", {
+      const response = await fetch("/api/generate-low-quality-video", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(renderPayload),
       });
 

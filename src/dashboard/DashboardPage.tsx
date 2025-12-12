@@ -139,66 +139,22 @@ const DashboardPage = () => {
   // Handle video download - regenerate and download using saved style
   const handleDownload = async (video: VideoRecord): Promise<void> => {
     try {
-      // Use saved style parameters for identical regeneration
-      const canvasW = video.canvasWidth || 1080;
-      const canvasH = video.canvasHeight || 1920;
-      const fontSize = video.fontSize || 48;
-      const fontFamily = (video.fontFamily || "Inter").split(",")[0].trim();
-      const textColor = video.textColor || "#FFFFFF";
-      const boxOpacity = video.boxOpacity ?? 0.3;
+      // Build quote text with author
+      const quoteWithAuthor =
+        video.quoteText + (video.authorText ? `\n\n— ${video.authorText}` : "");
 
-      // Convert hex color to rgba
-      const hexToRgba = (hex: string) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        if (result) {
-          return `rgba(${parseInt(result[1], 16)},${parseInt(
-            result[2],
-            16
-          )},${parseInt(result[3], 16)},1)`;
-        }
-        return "rgba(255,255,255,1)";
-      };
-
-      // Build render payload using saved style parameters
+      // Use low-quality endpoint for cloud deployment
       const renderPayload = {
-        quote: video.quoteText,
-        wrappedText:
-          video.quoteText +
-          (video.authorText ? `\n\n— ${video.authorText}` : ""),
-        canvasWidth: canvasW,
-        canvasHeight: canvasH,
-        fontFamily: fontFamily,
-        fontSize: fontSize,
-        fontColor: hexToRgba(textColor),
-        textAlign: "center" as const,
-        textBox: {
-          x: canvasW / 2,
-          y: video.templateId === "center" ? canvasH / 2 : canvasH * 0.75,
-        },
-        backgroundImageUrl: video.thumbnail,
-        backgroundBrightness: 1 - boxOpacity,
-        backgroundBlur: 0,
-        gradientOverlay: {
-          enabled: boxOpacity > 0,
-          direction: "top-bottom" as const,
-          startColor: `rgba(0,0,0,${boxOpacity})`,
-          endColor: `rgba(0,0,0,${boxOpacity * 0.5})`,
-        },
-        animation: {
-          type: "subtle-zoom" as const,
-          zoomStart: 1.05,
-          zoomEnd: 1.0,
-          fadeText: true,
-          fadeDuration: 0.8,
-        },
-        duration: 6,
+        quote: quoteWithAuthor,
+        imageUrl: video.thumbnail,
       };
 
-      const response = await fetch("/api/render-video", {
+      const response = await fetch("/api/generate-low-quality-video", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(renderPayload),
       });
 
