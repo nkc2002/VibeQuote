@@ -38,10 +38,12 @@ const AuthModal = () => {
 
   const [forgotEmail, setForgotEmail] = useState("");
 
-  // Sync tab with context
+  // Sync tab with context when modal opens or tab changes
   useEffect(() => {
-    setActiveTab(authModalTab);
-  }, [authModalTab]);
+    if (authModalOpen) {
+      setActiveTab(authModalTab);
+    }
+  }, [authModalOpen, authModalTab]);
 
   const resetForms = () => {
     setError("");
