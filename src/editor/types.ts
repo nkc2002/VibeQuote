@@ -219,16 +219,16 @@ export const createTextLayer = (
 
   const actualFontSize = isAuthor ? fontSize * 0.6 : fontSize;
 
-  // Use 0 for width/height to indicate auto-sizing mode (will be measured when rendered)
-  // The layer wrapper will use 'auto' dimensions until user explicitly resizes
+  // Quote gets default width of 500px for nice wrapping, author uses auto-size
+  const defaultWidth = isAuthor ? 0 : 500;
 
   return {
     id: generateId(),
     text,
     x: 50, // Center horizontally
     y: yPosition,
-    width: 0, // 0 = auto-size mode
-    height: 0, // 0 = auto-size mode
+    width: defaultWidth, // Quote = 500px, Author = auto
+    height: 0, // auto height
     fontSize: actualFontSize,
     fontFamily,
     color,
