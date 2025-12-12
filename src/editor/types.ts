@@ -219,18 +219,16 @@ export const createTextLayer = (
 
   const actualFontSize = isAuthor ? fontSize * 0.6 : fontSize;
 
-  // Auto-fit: estimate initial width based on text length and font size
-  // This is approximate; actual size will be measured when rendered
-  const estimatedWidth = Math.min(text.length * actualFontSize * 0.6, 800);
-  const estimatedHeight = actualFontSize * 1.5;
+  // Use 0 for width/height to indicate auto-sizing mode (will be measured when rendered)
+  // The layer wrapper will use 'auto' dimensions until user explicitly resizes
 
   return {
     id: generateId(),
     text,
     x: 50, // Center horizontally
     y: yPosition,
-    width: estimatedWidth,
-    height: estimatedHeight,
+    width: 0, // 0 = auto-size mode
+    height: 0, // 0 = auto-size mode
     fontSize: actualFontSize,
     fontFamily,
     color,

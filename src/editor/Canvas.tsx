@@ -378,13 +378,24 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
         const rect = canvasRef.current.getBoundingClientRect();
 
+        // Get actual layer element to measure its size (for auto-sized layers)
+        const layerElement = e.currentTarget.parentElement;
+        let actualWidth = layer.width;
+        let actualHeight = layer.height;
+
+        if (layerElement && (layer.width === 0 || layer.height === 0)) {
+          const layerRect = layerElement.getBoundingClientRect();
+          actualWidth = layer.width === 0 ? layerRect.width : layer.width;
+          actualHeight = layer.height === 0 ? layerRect.height : layer.height;
+        }
+
         setResizing(layerId);
         setResizeStart({
           handleType,
           startMouseX: e.clientX,
           startMouseY: e.clientY,
-          startWidth: layer.width,
-          startHeight: layer.height,
+          startWidth: actualWidth,
+          startHeight: actualHeight,
           startLayerX: layer.x,
           startLayerY: layer.y,
           canvasWidth: rect.width,
@@ -521,18 +532,18 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
               }
             }}
           >
-            {/* Wrapper div with width-based text wrapping */}
+            {/* Wrapper div - auto-size when width=0, fixed size when resized */}
             <div
               className="relative"
               style={{
-                width: layer.width,
-                minHeight: layer.height,
+                // Use auto width when width=0 (initial), otherwise use fixed width
+                width: layer.width > 0 ? layer.width : "auto",
+                minHeight: layer.height > 0 ? layer.height : "auto",
+                maxWidth: layer.width > 0 ? undefined : "80%",
                 wordWrap: "break-word",
                 overflowWrap: "break-word",
                 textAlign: "center",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                whiteSpace: layer.width > 0 ? "normal" : "nowrap",
               }}
             >
               {layer.text}
