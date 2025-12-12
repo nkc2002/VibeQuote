@@ -525,6 +525,13 @@ app.get("/api/videos", requireAuth, async (req, res) => {
       .sort({ createdAt: -1 })
       .toArray();
 
+    console.log(`[List] Fetched ${videos.length} videos for user ${userId}`);
+    if (videos.length > 0) {
+      console.log(
+        `[List] First video download count: ${videos[0].downloadCount}`
+      );
+    }
+
     res.json({
       success: true,
       data: videos.map((v: any) => ({
@@ -674,6 +681,8 @@ app.post("/api/videos/download/:id", requireAuth, async (req, res) => {
     const userId = (req as any).userId;
     const videoId = req.params.id;
 
+    console.log(`[Download] Incrementing for video ${videoId} user ${userId}`);
+
     if (!ObjectId.isValid(videoId)) {
       return res.status(400).json({ error: "Invalid video ID" });
     }
@@ -688,8 +697,11 @@ app.post("/api/videos/download/:id", requireAuth, async (req, res) => {
       );
 
     if (!result) {
+      console.log(`[Download] Video not found or not owned by user`);
       return res.status(404).json({ error: "Video not found" });
     }
+
+    console.log(`[Download] New count: ${result.downloadCount}`);
 
     res.json({
       success: true,
