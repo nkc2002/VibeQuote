@@ -268,43 +268,50 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         let newY = startLayerY;
 
         // Calculate based on handle type
+        // Key insight: center must move by half the drag to keep opposite edge/corner fixed
         switch (handleType) {
           // Edge handles - single dimension
-          case "n": // Top edge
+          case "n": // Top edge - bottom edge fixed
             newHeight = Math.max(10, startHeight - dy);
             newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
             break;
-          case "s": // Bottom edge
+          case "s": // Bottom edge - top edge fixed
             newHeight = Math.max(10, startHeight + dy);
+            newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
             break;
-          case "w": // Left edge
+          case "w": // Left edge - right edge fixed
             newWidth = Math.max(10, startWidth - dx);
             newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
             break;
-          case "e": // Right edge
+          case "e": // Right edge - left edge fixed
             newWidth = Math.max(10, startWidth + dx);
+            newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
             break;
 
           // Corner handles - both dimensions
-          case "nw": // Top-left
+          case "nw": // Top-left - bottom-right fixed
             newWidth = Math.max(10, startWidth - dx);
             newHeight = Math.max(10, startHeight - dy);
             newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
             newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
             break;
-          case "ne": // Top-right
+          case "ne": // Top-right - bottom-left fixed
             newWidth = Math.max(10, startWidth + dx);
             newHeight = Math.max(10, startHeight - dy);
+            newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
             newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
             break;
-          case "sw": // Bottom-left
+          case "sw": // Bottom-left - top-right fixed
             newWidth = Math.max(10, startWidth - dx);
             newHeight = Math.max(10, startHeight + dy);
             newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
+            newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
             break;
-          case "se": // Bottom-right
+          case "se": // Bottom-right - top-left fixed
             newWidth = Math.max(10, startWidth + dx);
             newHeight = Math.max(10, startHeight + dy);
+            newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
+            newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
             break;
         }
 
