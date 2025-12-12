@@ -2,7 +2,7 @@
  * Protected Route Component
  *
  * - If loading → show loading screen
- * - If user = null → redirect to Landing + auto-open AuthModal
+ * - If user = null → redirect to Landing
  * - Else → render children
  */
 
@@ -11,24 +11,17 @@ import { useAuth } from "./AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  redirectPath?: string;
 }
 
-const ProtectedRoute = ({ children, redirectPath }: ProtectedRouteProps) => {
-  const { isAuthenticated, loading, openAuthModal } = useAuth();
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      // Save current path for redirect after login
-      const currentPath = window.location.hash || "#/";
-
-      // Redirect to landing
+      // Redirect to landing page only (don't auto-open modal)
       window.location.hash = "/";
-
-      // Open auth modal with redirect
-      openAuthModal("login", redirectPath || currentPath);
     }
-  }, [loading, isAuthenticated, openAuthModal, redirectPath]);
+  }, [loading, isAuthenticated]);
 
   // Loading state
   if (loading) {
