@@ -507,20 +507,6 @@ const getFFmpegPath = (): string => {
 };
 
 /**
- * Sanitize text for FFmpeg drawtext filter
- * Escapes: ' " \ % : ,
- */
-function sanitizeText(text: string): string {
-  return text
-    .replace(/\\/g, "\\\\\\\\") // Backslash
-    .replace(/'/g, "'\\''") // Single quote
-    .replace(/"/g, '\\"') // Double quote
-    .replace(/:/g, "\\:") // Colon
-    .replace(/%/g, "\\%") // Percent
-    .replace(/,/g, "\\,"); // Comma
-}
-
-/**
  * POST /api/generate-low-quality-video
  *
  * Generates a low-quality 3-5 second video optimized for Vercel serverless.
@@ -565,27 +551,18 @@ app.post("/api/generate-low-quality-video", requireAuth, async (req, res) => {
     writeFileSync(bgPath, imageBuffer);
     console.log("[LQ Video] Image saved to", bgPath);
 
-    // Step 2: Sanitize text for FFmpeg
-    const sanitizedQuote = sanitizeText(quote);
-
-    // Step 3: Build FFmpeg command
+    // Step 2: Build FFmpeg command
     const ffmpegPath = getFFmpegPath();
     console.log("[LQ Video] FFmpeg path:", ffmpegPath);
 
     // Video settings optimized for Vercel:
-    // - 480p resolution (scale=480:-2 maintains aspect ratio)
-    // - 12 fps (low frame rate)
-    // - crf=35 (high compression, lower quality)
-    // - ultrafast preset (fastest encoding)
-    // - 3 second duration
+    // Note: drawtext filter is NOT available in ffmpeg-static
+    // So we create a simple video from the image only
     const duration = 3;
-    const fontSize = 24;
 
-    // Filter: scale to 480p, add centered white text
-    const filterComplex = [
-      `scale=480:-2`,
-      `drawtext=text='${sanitizedQuote}':fontsize=${fontSize}:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2`,
-    ].join(",");
+    // Simple filter: just scale to 480p
+    // No text overlay since drawtext requires libfreetype
+    const filterComplex = "scale=480:-2";
 
     const ffmpegArgs = [
       "-y", // Overwrite output
