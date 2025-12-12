@@ -8,6 +8,9 @@ import {
 } from "react";
 import { TextLayer } from "./types";
 
+// Resize handle types
+type HandleType = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+
 interface CanvasProps {
   layers: TextLayer[];
   backgroundImage: string | null;
@@ -17,7 +20,13 @@ interface CanvasProps {
   isPreviewMode: boolean;
   onSelectLayer: (id: string | null) => void;
   onMoveLayer: (id: string, x: number, y: number) => void;
-  onResizeLayer?: (id: string, newFontSize: number) => void;
+  onResizeLayer?: (
+    id: string,
+    width: number,
+    height: number,
+    x?: number,
+    y?: number
+  ) => void;
 }
 
 export interface CanvasRef {
@@ -50,15 +59,15 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
     // Resize state
     const [resizing, setResizing] = useState<string | null>(null);
     const [resizeStart, setResizeStart] = useState<{
-      mouseX: number;
-      mouseY: number;
-      fontSize: number;
-      layerX: number;
-      layerY: number;
-      startRelX: number;
-      startRelY: number;
-      layerCenterX: number;
-      layerCenterY: number;
+      handleType: HandleType;
+      startMouseX: number;
+      startMouseY: number;
+      startWidth: number;
+      startHeight: number;
+      startLayerX: number;
+      startLayerY: number;
+      canvasWidth: number;
+      canvasHeight: number;
     } | null>(null);
 
     // Expose captureAsDataURL method to parent via ref
@@ -233,38 +242,107 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         return;
 
       const handleMouseMove = (e: MouseEvent) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+        const {
+          handleType,
+          startMouseX,
+          startMouseY,
+          startWidth,
+          startHeight,
+          startLayerX,
+          startLayerY,
+          canvasWidth,
+          canvasHeight,
+        } = resizeStart;
 
-        const rect = canvas.getBoundingClientRect();
+        // Calculate delta in pixels
+        const dx = e.clientX - startMouseX;
+        const dy = e.clientY - startMouseY;
 
-        // Current mouse position relative to canvas
-        const mouseRelX = e.clientX - rect.left;
-        const mouseRelY = e.clientY - rect.top;
+        // Check modifier keys
+        const shiftKey = e.shiftKey; // Maintain aspect ratio
+        const altKey = e.altKey; // Resize from center
 
-        // Calculate distance from layer center for scaling
-        // If moving away from center (positive delta in dominant direction), scale up
-        const startDistFromCenter = Math.sqrt(
-          Math.pow(resizeStart.startRelX - resizeStart.layerCenterX, 2) +
-            Math.pow(resizeStart.startRelY - resizeStart.layerCenterY, 2)
-        );
-        const currentDistFromCenter = Math.sqrt(
-          Math.pow(mouseRelX - resizeStart.layerCenterX, 2) +
-            Math.pow(mouseRelY - resizeStart.layerCenterY, 2)
-        );
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        let newX = startLayerX;
+        let newY = startLayerY;
 
-        if (startDistFromCenter === 0) return;
+        // Calculate based on handle type
+        switch (handleType) {
+          // Edge handles - single dimension
+          case "n": // Top edge
+            newHeight = Math.max(10, startHeight - dy);
+            newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
+            break;
+          case "s": // Bottom edge
+            newHeight = Math.max(10, startHeight + dy);
+            break;
+          case "w": // Left edge
+            newWidth = Math.max(10, startWidth - dx);
+            newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
+            break;
+          case "e": // Right edge
+            newWidth = Math.max(10, startWidth + dx);
+            break;
 
-        // Scale factor based on distance from layer center
-        const scaleFactor = currentDistFromCenter / startDistFromCenter;
+          // Corner handles - both dimensions
+          case "nw": // Top-left
+            newWidth = Math.max(10, startWidth - dx);
+            newHeight = Math.max(10, startHeight - dy);
+            newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
+            newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
+            break;
+          case "ne": // Top-right
+            newWidth = Math.max(10, startWidth + dx);
+            newHeight = Math.max(10, startHeight - dy);
+            newY = startLayerY + ((dy / canvasHeight) * 100) / 2;
+            break;
+          case "sw": // Bottom-left
+            newWidth = Math.max(10, startWidth - dx);
+            newHeight = Math.max(10, startHeight + dy);
+            newX = startLayerX + ((dx / canvasWidth) * 100) / 2;
+            break;
+          case "se": // Bottom-right
+            newWidth = Math.max(10, startWidth + dx);
+            newHeight = Math.max(10, startHeight + dy);
+            break;
+        }
 
-        // Calculate new font size
-        let newFontSize = Math.round(resizeStart.fontSize * scaleFactor);
+        // Shift: maintain aspect ratio
+        if (
+          shiftKey &&
+          (handleType === "nw" ||
+            handleType === "ne" ||
+            handleType === "sw" ||
+            handleType === "se")
+        ) {
+          const aspectRatio = startWidth / startHeight;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            newHeight = newWidth / aspectRatio;
+          } else {
+            newWidth = newHeight * aspectRatio;
+          }
+        }
 
-        // Clamp between 12px and 200px
-        newFontSize = Math.max(12, Math.min(200, newFontSize));
+        // Alt: resize from center (double the delta but keep layer centered)
+        if (altKey) {
+          const widthDiff = newWidth - startWidth;
+          const heightDiff = newHeight - startHeight;
+          newWidth = startWidth + widthDiff * 2;
+          newHeight = startHeight + heightDiff * 2;
+          newX = startLayerX; // Keep centered
+          newY = startLayerY;
+        }
 
-        onResizeLayer(resizing, newFontSize);
+        // Ensure minimum size
+        newWidth = Math.max(10, newWidth);
+        newHeight = Math.max(10, newHeight);
+
+        // Clamp position to canvas
+        newX = Math.max(2, Math.min(98, newX));
+        newY = Math.max(2, Math.min(98, newY));
+
+        onResizeLayer(resizing, newWidth, newHeight, newX, newY);
       };
 
       const handleMouseUp = () => {
@@ -283,7 +361,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
     // Handle resize start
     const handleResizeMouseDown = useCallback(
-      (e: React.MouseEvent, layerId: string) => {
+      (e: React.MouseEvent, layerId: string, handleType: HandleType) => {
         if (isPreviewMode || !onResizeLayer) return;
         e.preventDefault();
         e.stopPropagation();
@@ -293,26 +371,17 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
 
         const rect = canvasRef.current.getBoundingClientRect();
 
-        // Calculate layer center in canvas coordinates
-        const layerCenterX = (layer.x / 100) * rect.width;
-        const layerCenterY = (layer.y / 100) * rect.height;
-
-        // Mouse position relative to canvas
-        const startRelX = e.clientX - rect.left;
-        const startRelY = e.clientY - rect.top;
-
         setResizing(layerId);
         setResizeStart({
-          mouseX: e.clientX,
-          mouseY: e.clientY,
-          fontSize: layer.fontSize,
-          layerX: layer.x,
-          layerY: layer.y,
-          // New fields for proper calculation
-          startRelX,
-          startRelY,
-          layerCenterX,
-          layerCenterY,
+          handleType,
+          startMouseX: e.clientX,
+          startMouseY: e.clientY,
+          startWidth: layer.width,
+          startHeight: layer.height,
+          startLayerX: layer.x,
+          startLayerY: layer.y,
+          canvasWidth: rect.width,
+          canvasHeight: rect.height,
         });
       },
       [isPreviewMode, layers, onResizeLayer]
@@ -445,86 +514,94 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
               }
             }}
           >
-            {/* Wrapper div for proper resize handle positioning */}
-            <div className="relative inline-block">
+            {/* Wrapper div with width-based text wrapping */}
+            <div
+              className="relative"
+              style={{
+                width: layer.width,
+                minHeight: layer.height,
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+              }}
+            >
               {layer.text}
 
-              {/* Resize handles - only show on selected layer when not in preview mode */}
+              {/* Resize handles - 4 corners + 4 edges */}
               {layer.isSelected && !isPreviewMode && onResizeLayer && (
                 <>
                   {/* Corner handles - scale both dimensions */}
-                  {/* SE corner (bottom-right) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 transition-colors z-50"
-                    style={{ bottom: -8, right: -8 }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ bottom: -6, right: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "se")
+                    }
                     aria-label="Resize corner bottom-right"
                   />
-                  {/* SW corner (bottom-left) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 transition-colors z-50"
-                    style={{ bottom: -8, left: -8 }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ bottom: -6, left: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "sw")
+                    }
                     aria-label="Resize corner bottom-left"
                   />
-                  {/* NE corner (top-right) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 transition-colors z-50"
-                    style={{ top: -8, right: -8 }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ top: -6, right: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "ne")
+                    }
                     aria-label="Resize corner top-right"
                   />
-                  {/* NW corner (top-left) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 transition-colors z-50"
-                    style={{ top: -8, left: -8 }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ top: -6, left: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "nw")
+                    }
                     aria-label="Resize corner top-left"
                   />
 
                   {/* Edge handles - scale one dimension */}
-                  {/* Top edge (north) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 transition-colors z-50"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                     style={{
-                      top: -8,
+                      top: -6,
                       left: "50%",
                       transform: "translateX(-50%)",
                     }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "n")}
                     aria-label="Resize edge top"
                   />
-                  {/* Bottom edge (south) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 transition-colors z-50"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                     style={{
-                      bottom: -8,
+                      bottom: -6,
                       left: "50%",
                       transform: "translateX(-50%)",
                     }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "s")}
                     aria-label="Resize edge bottom"
                   />
-                  {/* Left edge (west) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 transition-colors z-50"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                     style={{
-                      left: -8,
+                      left: -6,
                       top: "50%",
                       transform: "translateY(-50%)",
                     }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "w")}
                     aria-label="Resize edge left"
                   />
-                  {/* Right edge (east) */}
                   <div
-                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 transition-colors z-50"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
                     style={{
-                      right: -8,
+                      right: -6,
                       top: "50%",
                       transform: "translateY(-50%)",
                     }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "e")}
                     aria-label="Resize edge right"
                   />
                 </>

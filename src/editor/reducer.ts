@@ -200,12 +200,19 @@ export function editorReducer(
     }
 
     case "RESIZE_LAYER": {
-      // Update specific layer's fontSize (no history during drag - history saved on mouse up)
+      // Update layer's width/height and optionally position
+      const { id, width, height, x, y } = action.payload;
       return {
         ...state,
         layers: state.layers.map((layer) =>
-          layer.id === action.payload.id
-            ? { ...layer, fontSize: action.payload.fontSize }
+          layer.id === id
+            ? {
+                ...layer,
+                width,
+                height,
+                ...(x !== undefined && { x }),
+                ...(y !== undefined && { y }),
+              }
             : layer
         ),
       };

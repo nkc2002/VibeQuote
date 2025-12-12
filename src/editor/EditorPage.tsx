@@ -67,9 +67,12 @@ const EditorPage = () => {
     dispatch({ type: "MOVE_LAYER", payload: { id, x, y } });
   }, []);
 
-  const handleResizeLayer = useCallback((id: string, newFontSize: number) => {
-    dispatch({ type: "RESIZE_LAYER", payload: { id, fontSize: newFontSize } });
-  }, []);
+  const handleResizeLayer = useCallback(
+    (id: string, width: number, height: number, x?: number, y?: number) => {
+      dispatch({ type: "RESIZE_LAYER", payload: { id, width, height, x, y } });
+    },
+    []
+  );
 
   const handleGenerate = useCallback(async () => {
     // Validation

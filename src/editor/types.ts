@@ -5,6 +5,8 @@ export interface TextLayer {
   text: string;
   x: number; // percentage 0-100
   y: number; // percentage 0-100
+  width: number; // width in pixels (null = auto-fit)
+  height: number; // height in pixels (auto-calculated based on text wrap)
   fontSize: number;
   fontFamily: string;
   color: string;
@@ -71,7 +73,16 @@ export type EditorAction =
   | { type: "MOVE_LAYER"; payload: { id: string; x: number; y: number } }
   | { type: "ADD_LAYER"; payload: TextLayer }
   | { type: "UPDATE_LAYER"; payload: Partial<TextLayer> & { id: string } }
-  | { type: "RESIZE_LAYER"; payload: { id: string; fontSize: number } }
+  | {
+      type: "RESIZE_LAYER";
+      payload: {
+        id: string;
+        width: number;
+        height: number;
+        x?: number;
+        y?: number;
+      };
+    }
   | { type: "DELETE_LAYER"; payload: string }
   | { type: "UNDO" }
   | { type: "REDO" }
@@ -206,12 +217,21 @@ export const createTextLayer = (
       ? 85
       : 75; // Bottom: quote at 75%, author at 85%
 
+  const actualFontSize = isAuthor ? fontSize * 0.6 : fontSize;
+
+  // Auto-fit: estimate initial width based on text length and font size
+  // This is approximate; actual size will be measured when rendered
+  const estimatedWidth = Math.min(text.length * actualFontSize * 0.6, 800);
+  const estimatedHeight = actualFontSize * 1.5;
+
   return {
     id: generateId(),
     text,
     x: 50, // Center horizontally
     y: yPosition,
-    fontSize: isAuthor ? fontSize * 0.6 : fontSize,
+    width: estimatedWidth,
+    height: estimatedHeight,
+    fontSize: actualFontSize,
     fontFamily,
     color,
     opacity: 1,
