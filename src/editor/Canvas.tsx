@@ -522,6 +522,10 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
                 minHeight: layer.height,
                 wordWrap: "break-word",
                 overflowWrap: "break-word",
+                textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               {layer.text}
