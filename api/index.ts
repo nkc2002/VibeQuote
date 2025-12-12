@@ -618,14 +618,26 @@ app.get("/api/videos/stats/summary", requireAuth, async (req, res) => {
     const videos = await db.collection("videos").find({ userId }).toArray();
 
     // Calculate stats
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTimestamp = today.getTime();
+    // Use "Last 24 Hours" logic to avoid timezone issues for now
+    const now = Date.now();
+    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+
+    // Debug timestamps
+    console.log("[Stats] Now:", new Date(now).toISOString());
+    console.log("[Stats] One Day Ago:", new Date(oneDayAgo).toISOString());
 
     const totalVideos = videos.length;
-    const todayCount = videos.filter(
-      (v: any) => v.createdAt >= todayTimestamp
-    ).length;
+
+    const todayCount = videos.filter((v: any) => {
+      const created = v.createdAt;
+      console.log(
+        `[Stats] Video ${v._id}: created=${created} (${new Date(
+          created
+        ).toISOString()})`
+      );
+      return created >= oneDayAgo;
+    }).length;
+
     const totalDownloads = videos.reduce(
       (sum: number, v: any) => sum + (v.downloadCount || 0),
       0
