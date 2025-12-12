@@ -436,33 +436,80 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
               {/* Resize handles - only show on selected layer when not in preview mode */}
               {layer.isSelected && !isPreviewMode && onResizeLayer && (
                 <>
+                  {/* Corner handles - scale both dimensions */}
                   {/* SE corner (bottom-right) */}
                   <div
                     className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 transition-colors z-50"
                     style={{ bottom: -8, right: -8 }}
                     onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                    aria-label="Resize handle bottom-right"
+                    aria-label="Resize corner bottom-right"
                   />
                   {/* SW corner (bottom-left) */}
                   <div
                     className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 transition-colors z-50"
                     style={{ bottom: -8, left: -8 }}
                     onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                    aria-label="Resize handle bottom-left"
+                    aria-label="Resize corner bottom-left"
                   />
                   {/* NE corner (top-right) */}
                   <div
                     className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 transition-colors z-50"
                     style={{ top: -8, right: -8 }}
                     onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                    aria-label="Resize handle top-right"
+                    aria-label="Resize corner top-right"
                   />
                   {/* NW corner (top-left) */}
                   <div
                     className="absolute w-4 h-4 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 transition-colors z-50"
                     style={{ top: -8, left: -8 }}
                     onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
-                    aria-label="Resize handle top-left"
+                    aria-label="Resize corner top-left"
+                  />
+
+                  {/* Edge handles - scale one dimension */}
+                  {/* Top edge (north) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 transition-colors z-50"
+                    style={{
+                      top: -8,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize edge top"
+                  />
+                  {/* Bottom edge (south) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 transition-colors z-50"
+                    style={{
+                      bottom: -8,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize edge bottom"
+                  />
+                  {/* Left edge (west) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 transition-colors z-50"
+                    style={{
+                      left: -8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize edge left"
+                  />
+                  {/* Right edge (east) */}
+                  <div
+                    className="absolute w-4 h-4 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 transition-colors z-50"
+                    style={{
+                      right: -8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id)}
+                    aria-label="Resize edge right"
                   />
                 </>
               )}
