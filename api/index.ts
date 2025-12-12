@@ -106,15 +106,26 @@ app.use(async (_req, _res, next) => {
 // Routes
 // ============================================================
 
-// Health check
+// Health check with detailed debugging
 app.get("/api/health", async (_req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    environment: process.env.VERCEL ? "vercel" : "local",
-    dbConnected: dbConnected,
-    mongoUri: process.env.MONGODB_URI ? "configured" : "missing",
-  });
+  try {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      environment: process.env.VERCEL ? "vercel" : "local",
+      dbConnected: dbConnected,
+      config: {
+        mongoUri: process.env.MONGODB_URI ? "configured" : "MISSING",
+        jwtSecret: process.env.JWT_SECRET ? "configured" : "MISSING",
+        frontendUrl: process.env.FRONTEND_URL || "not set",
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      error: String(error),
+    });
+  }
 });
 
 // Auth routes (public)
