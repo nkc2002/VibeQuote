@@ -515,6 +515,9 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
               textAlign: "center",
               lineHeight: 1.4,
               zIndex: layer.isSelected ? 10 : 1,
+              width: layer.width > 0 ? layer.width : "auto",
+              wordWrap: "break-word",
+              overflowWrap: "break-word",
             }}
             onMouseDown={(e) => handleMouseDown(e, layer.id)}
             onClick={(e) => {
@@ -532,102 +535,69 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
               }
             }}
           >
-            {/* Wrapper div - auto-size when width=0, fixed size when resized */}
-            <div
-              className="relative"
-              style={{
-                // Use auto width when width=0 (initial), otherwise use fixed width
-                width: layer.width > 0 ? layer.width : "auto",
-                minHeight: layer.height > 0 ? layer.height : "auto",
-                maxWidth: "80%",
-                wordWrap: "break-word",
-                overflowWrap: "break-word",
-                textAlign: "center",
-              }}
-            >
-              {layer.text}
+            {layer.text}
 
-              {/* Resize handles - 4 corners + 4 edges */}
-              {layer.isSelected && !isPreviewMode && onResizeLayer && (
-                <>
-                  {/* Corner handles - scale both dimensions */}
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                    style={{ bottom: -6, right: -6 }}
-                    onMouseDown={(e) =>
-                      handleResizeMouseDown(e, layer.id, "se")
-                    }
-                    aria-label="Resize corner bottom-right"
-                  />
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                    style={{ bottom: -6, left: -6 }}
-                    onMouseDown={(e) =>
-                      handleResizeMouseDown(e, layer.id, "sw")
-                    }
-                    aria-label="Resize corner bottom-left"
-                  />
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                    style={{ top: -6, right: -6 }}
-                    onMouseDown={(e) =>
-                      handleResizeMouseDown(e, layer.id, "ne")
-                    }
-                    aria-label="Resize corner top-right"
-                  />
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                    style={{ top: -6, left: -6 }}
-                    onMouseDown={(e) =>
-                      handleResizeMouseDown(e, layer.id, "nw")
-                    }
-                    aria-label="Resize corner top-left"
-                  />
-
-                  {/* Edge handles - scale one dimension */}
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                    style={{
-                      top: -6,
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                    }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "n")}
-                    aria-label="Resize edge top"
-                  />
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                    style={{
-                      bottom: -6,
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                    }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "s")}
-                    aria-label="Resize edge bottom"
-                  />
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                    style={{
-                      left: -6,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                    }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "w")}
-                    aria-label="Resize edge left"
-                  />
-                  <div
-                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                    style={{
-                      right: -6,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                    }}
-                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "e")}
-                    aria-label="Resize edge right"
-                  />
-                </>
-              )}
-            </div>
+            {/* Resize handles */}
+            {layer.isSelected && !isPreviewMode && onResizeLayer && (
+              <>
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                  style={{ bottom: -6, right: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "se")}
+                />
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                  style={{ bottom: -6, left: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "sw")}
+                />
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                  style={{ top: -6, right: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "ne")}
+                />
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                  style={{ top: -6, left: -6 }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "nw")}
+                />
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                  style={{
+                    top: -6,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "n")}
+                />
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                  style={{
+                    bottom: -6,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "s")}
+                />
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                  style={{
+                    left: -6,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "w")}
+                />
+                <div
+                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                  style={{
+                    right: -6,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                  }}
+                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "e")}
+                />
+              </>
+            )}
           </div>
         ))}
 
