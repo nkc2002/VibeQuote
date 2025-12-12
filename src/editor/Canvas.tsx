@@ -176,8 +176,21 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const handleMouseDown = useCallback(
       (e: React.MouseEvent, layerId: string) => {
         if (isPreviewMode) return;
-        // Don't start drag if we're resizing
-        if (resizing) return;
+
+        // Don't start drag if clicking on resize handle
+        const target = e.target as HTMLElement;
+        if (
+          target.classList.contains("cursor-se-resize") ||
+          target.classList.contains("cursor-sw-resize") ||
+          target.classList.contains("cursor-ne-resize") ||
+          target.classList.contains("cursor-nw-resize") ||
+          target.classList.contains("cursor-n-resize") ||
+          target.classList.contains("cursor-s-resize") ||
+          target.classList.contains("cursor-e-resize") ||
+          target.classList.contains("cursor-w-resize")
+        ) {
+          return;
+        }
 
         e.preventDefault();
         e.stopPropagation();
@@ -186,7 +199,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         onSelectLayer(layerId);
         setDragStart({ x: e.clientX, y: e.clientY });
       },
-      [isPreviewMode, onSelectLayer, resizing]
+      [isPreviewMode, onSelectLayer]
     );
 
     // Handle mouse move
