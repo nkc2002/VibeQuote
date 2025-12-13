@@ -46,6 +46,48 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
   const [progress, setProgress] = useState(0);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [browserWarning, setBrowserWarning] = useState("");
+  const [isCancelled, setIsCancelled] = useState(false);
+
+  // Browser compatibility detection
+  const checkBrowserSupport = useCallback(() => {
+    // Check MediaRecorder support
+    if (typeof MediaRecorder === "undefined") {
+      return {
+        supported: false,
+        error:
+          "Trình duyệt của bạn không hỗ trợ ghi video. Vui lòng sử dụng Chrome, Edge hoặc Firefox.",
+      };
+    }
+
+    // Check captureStream support
+    const testCanvas = document.createElement("canvas");
+    if (typeof testCanvas.captureStream !== "function") {
+      return {
+        supported: false,
+        error:
+          "Trình duyệt của bạn không hỗ trợ canvas.captureStream(). Vui lòng cập nhật hoặc sử dụng Chrome.",
+      };
+    }
+
+    // Check for Chrome-based browser
+    const isChrome =
+      /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    const isEdge = /Edg/.test(navigator.userAgent);
+    const isFirefox = /Firefox/.test(navigator.userAgent);
+
+    let warning = "";
+    if (!isChrome && !isEdge) {
+      if (isFirefox) {
+        warning =
+          "Firefox có thể gặp vấn đề với video export. Khuyến nghị sử dụng Chrome hoặc Edge.";
+      } else {
+        warning = "Để có kết quả tốt nhất, hãy sử dụng Chrome hoặc Edge.";
+      }
+    }
+
+    return { supported: true, warning };
+  }, []);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -54,8 +96,37 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       setProgress(0);
       setVideoBlob(null);
       setErrorMessage("");
+      setIsCancelled(false);
+
+      // Check browser support
+      const { supported, error, warning } = checkBrowserSupport();
+      if (!supported) {
+        setErrorMessage(error || "Trình duyệt không được hỗ trợ");
+        setExportState("error");
+      }
+      setBrowserWarning(warning || "");
     }
-  }, [isOpen]);
+  }, [isOpen, checkBrowserSupport]);
+
+  // Handle tab visibility change during export
+  useEffect(() => {
+    if (exportState !== "exporting") return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.warn("[VideoExport] Tab became hidden during export");
+        setIsCancelled(true);
+        setErrorMessage(
+          "Export bị hủy vì tab không còn active. Vui lòng giữ tab này ở foreground."
+        );
+        setExportState("error");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [exportState]);
 
   // Get resolution based on quality
   const getResolution = (quality: "720p" | "1080p") => {
@@ -64,10 +135,35 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       : { width: 1280, height: 720 };
   };
 
+  // Cancel export
+  const handleCancel = useCallback(() => {
+    setIsCancelled(true);
+    setExportState("options");
+    setProgress(0);
+  }, []);
+
   // Client-side video export using Canvas + MediaRecorder
   const handleExport = useCallback(async () => {
+    // Pre-flight checks
+    const { supported, error } = checkBrowserSupport();
+    if (!supported) {
+      setErrorMessage(error || "Trình duyệt không được hỗ trợ");
+      setExportState("error");
+      return;
+    }
+
+    // Check if tab is visible
+    if (document.hidden) {
+      setErrorMessage(
+        "Vui lòng giữ tab này active trong quá trình export video."
+      );
+      setExportState("error");
+      return;
+    }
+
     setExportState("exporting");
     setProgress(0);
+    setIsCancelled(false);
 
     try {
       // Step 1: Capture canvas as image
@@ -222,7 +318,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       );
       setExportState("error");
     }
-  }, [captureCanvas, options, onExportComplete]);
+  }, [captureCanvas, options, onExportComplete, checkBrowserSupport]);
 
   // Download video
   const handleDownload = useCallback(() => {
@@ -343,6 +439,24 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
           {/* Options State */}
           {exportState === "options" && (
             <div className="space-y-5">
+              {/* Browser Warning */}
+              {browserWarning && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <svg
+                    className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <p className="text-amber-400 text-sm">{browserWarning}</p>
+                </div>
+              )}
+
               {/* Duration */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -472,6 +586,14 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
                 {progress >= 30 && progress < 90 && "Đang render video..."}
                 {progress >= 90 && "Đang hoàn tất..."}
               </p>
+
+              {/* Cancel Button */}
+              <button
+                onClick={handleCancel}
+                className="w-full mt-4 py-2 px-4 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                Hủy
+              </button>
             </div>
           )}
 
