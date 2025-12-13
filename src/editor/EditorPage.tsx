@@ -113,8 +113,8 @@ const EditorPage = () => {
         thumbnail: state.backgroundImage || "",
         quoteText: state.quoteText,
         authorText: state.authorText || "",
-        templateId: state.template || "center",
-        templateName: state.template === "center" ? "Center" : "Bottom",
+        templateId: "center",
+        templateName: "Center",
         fontSize: state.fontSize,
         fontFamily: state.fontFamily,
         textColor: state.textColor,
@@ -130,7 +130,6 @@ const EditorPage = () => {
     state.backgroundImage,
     state.quoteText,
     state.authorText,
-    state.template,
     state.fontSize,
     state.fontFamily,
     state.textColor,
@@ -240,7 +239,6 @@ const EditorPage = () => {
           >
             <StylePanel
               activeTab={state.activeRightTab}
-              template={state.template}
               fontFamily={state.fontFamily}
               fontSize={state.fontSize}
               textColor={state.textColor}
@@ -249,9 +247,6 @@ const EditorPage = () => {
               backgroundImage={state.backgroundImage}
               onSetTab={(tab) =>
                 dispatch({ type: "SET_RIGHT_TAB", payload: tab })
-              }
-              onSetTemplate={(template) =>
-                dispatch({ type: "SET_TEMPLATE", payload: template })
               }
               onSetFontFamily={(font) =>
                 dispatch({ type: "SET_FONT_FAMILY", payload: font })

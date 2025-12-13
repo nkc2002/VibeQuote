@@ -31,7 +31,6 @@ export interface EditorState {
   authorText: string;
 
   // Style settings
-  template: "center" | "bottom";
   fontFamily: string;
   fontSize: number;
   textColor: string;
@@ -46,7 +45,7 @@ export interface EditorState {
   isPreviewMode: boolean;
   leftSidebarOpen: boolean;
   rightSidebarOpen: boolean;
-  activeRightTab: "template" | "style" | "image";
+  activeRightTab: "style" | "image";
 }
 
 export interface EditorHistoryItem {
@@ -90,7 +89,7 @@ export type EditorAction =
   | { type: "SET_GENERATING"; payload: boolean }
   | { type: "TOGGLE_LEFT_SIDEBAR" }
   | { type: "TOGGLE_RIGHT_SIDEBAR" }
-  | { type: "SET_RIGHT_TAB"; payload: "template" | "style" | "image" }
+  | { type: "SET_RIGHT_TAB"; payload: "style" | "image" }
   | { type: "APPLY_QUOTE_TO_CANVAS" };
 
 // Mock data
@@ -179,7 +178,6 @@ export const initialEditorState: EditorState = {
   quoteText: "",
   authorText: "",
 
-  template: "center",
   fontFamily: MOCK_FONTS[0].value,
   fontSize: 48,
   textColor: "#FFFFFF",
@@ -192,30 +190,23 @@ export const initialEditorState: EditorState = {
   isPreviewMode: false,
   leftSidebarOpen: true,
   rightSidebarOpen: true,
-  activeRightTab: "template",
+  activeRightTab: "style",
 };
 
 // Helper to generate unique IDs
 export const generateId = () =>
   `layer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-// Create layer from current settings
+// Create layer from current settings (always uses center positioning)
 export const createTextLayer = (
   text: string,
-  template: "center" | "bottom",
   fontFamily: string,
   fontSize: number,
   color: string,
   isAuthor: boolean = false
 ): TextLayer => {
-  const yPosition =
-    template === "center"
-      ? isAuthor
-        ? 55
-        : 45 // Center: quote at 45%, author at 55%
-      : isAuthor
-      ? 85
-      : 75; // Bottom: quote at 75%, author at 85%
+  // Always use center positioning
+  const yPosition = isAuthor ? 55 : 45; // Center: quote at 45%, author at 55%
 
   const actualFontSize = isAuthor ? fontSize * 0.6 : fontSize;
 

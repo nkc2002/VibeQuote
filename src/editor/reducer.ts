@@ -40,7 +40,6 @@ export function editorReducer(
         quoteLayers.push(
           createTextLayer(
             `"${state.quoteText}"`,
-            state.template,
             state.fontFamily,
             state.fontSize,
             state.textColor,
@@ -53,7 +52,6 @@ export function editorReducer(
         quoteLayers.push(
           createTextLayer(
             `— ${state.authorText}`,
-            state.template,
             state.fontFamily,
             state.fontSize,
             state.textColor,
@@ -69,9 +67,6 @@ export function editorReducer(
         historyIndex: newHistory.length - 1,
       };
     }
-
-    case "SET_TEMPLATE":
-      return { ...state, template: action.payload };
 
     case "SET_FONT_FAMILY": {
       // Update all layers with new font

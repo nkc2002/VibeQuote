@@ -3,16 +3,14 @@ import { MOCK_FONTS, MOCK_COLORS, MOCK_GRADIENTS, MOCK_IMAGES } from "./types";
 import { ImagePickerModal } from "../image-picker";
 
 interface StylePanelProps {
-  activeTab: "template" | "style" | "image";
-  template: "center" | "bottom";
+  activeTab: "style" | "image";
   fontFamily: string;
   fontSize: number;
   textColor: string;
   boxOpacity: number;
   backgroundGradient: string;
   backgroundImage: string | null;
-  onSetTab: (tab: "template" | "style" | "image") => void;
-  onSetTemplate: (template: "center" | "bottom") => void;
+  onSetTab: (tab: "style" | "image") => void;
   onSetFontFamily: (font: string) => void;
   onSetFontSize: (size: number) => void;
   onSetTextColor: (color: string) => void;
@@ -25,7 +23,6 @@ interface StylePanelProps {
 
 const StylePanel = ({
   activeTab,
-  template,
   fontFamily,
   fontSize,
   textColor,
@@ -33,7 +30,6 @@ const StylePanel = ({
   backgroundGradient,
   backgroundImage,
   onSetTab,
-  onSetTemplate,
   onSetFontFamily,
   onSetFontSize,
   onSetTextColor,
@@ -59,7 +55,6 @@ const StylePanel = ({
       {/* Tabs */}
       <div className="flex border-b border-slate-700" role="tablist">
         {[
-          { id: "template", label: "Template" },
           { id: "style", label: "Style" },
           { id: "image", label: "Image" },
         ].map((tab) => (
@@ -67,7 +62,7 @@ const StylePanel = ({
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
-            onClick={() => onSetTab(tab.id as "template" | "style" | "image")}
+            onClick={() => onSetTab(tab.id as "style" | "image")}
             className={`flex-1 px-3 py-3 text-sm font-medium transition-colors cursor-pointer
               ${
                 activeTab === tab.id
@@ -82,53 +77,6 @@ const StylePanel = ({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === "template" && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-400 mb-4">Vị trí hiển thị quote</p>
-
-            {/* Template options */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => onSetTemplate("center")}
-                className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer
-                  ${
-                    template === "center"
-                      ? "border-primary-500 bg-primary-900/30"
-                      : "border-slate-700 bg-slate-800 hover:border-slate-600"
-                  }`}
-                aria-pressed={template === "center"}
-              >
-                <div className="aspect-video bg-slate-700 rounded-lg mb-3 flex items-center justify-center">
-                  <div className="w-3/4 space-y-1">
-                    <div className="h-2 bg-white/60 rounded" />
-                    <div className="h-1.5 bg-white/40 rounded mx-auto w-1/2" />
-                  </div>
-                </div>
-                <span className="text-sm text-slate-300">Giữa</span>
-              </button>
-
-              <button
-                onClick={() => onSetTemplate("bottom")}
-                className={`p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer
-                  ${
-                    template === "bottom"
-                      ? "border-primary-500 bg-primary-900/30"
-                      : "border-slate-700 bg-slate-800 hover:border-slate-600"
-                  }`}
-                aria-pressed={template === "bottom"}
-              >
-                <div className="aspect-video bg-slate-700 rounded-lg mb-3 flex flex-col justify-end p-2">
-                  <div className="w-3/4 mx-auto space-y-1">
-                    <div className="h-2 bg-white/60 rounded" />
-                    <div className="h-1.5 bg-white/40 rounded mx-auto w-1/2" />
-                  </div>
-                </div>
-                <span className="text-sm text-slate-300">Dưới</span>
-              </button>
-            </div>
-          </div>
-        )}
-
         {activeTab === "style" && (
           <div className="space-y-6">
             {/* Font family */}
