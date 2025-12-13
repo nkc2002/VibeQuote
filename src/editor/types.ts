@@ -49,6 +49,19 @@ export interface EditorState {
   musicEnabled: boolean;
   isMusicPlaying: boolean;
 
+  // Particle effects
+  particleEffect: "none" | "snow" | "dust" | "sparkles";
+
+  // Resolution preset
+  resolutionPreset: "story" | "square" | "landscape";
+
+  // Canvas zoom (UI only, 0.2-1)
+  canvasZoom: number;
+
+  // UX features
+  showLayerList: boolean;
+  showSnapGuides: boolean;
+
   // History for undo/redo
   history: EditorHistoryItem[];
   historyIndex: number;
@@ -111,7 +124,15 @@ export type EditorAction =
   | { type: "SET_MUSIC_TRACK"; payload: string | null }
   | { type: "SET_MUSIC_VOLUME"; payload: number }
   | { type: "TOGGLE_MUSIC_ENABLED" }
-  | { type: "TOGGLE_MUSIC_PLAYING" };
+  | { type: "TOGGLE_MUSIC_PLAYING" }
+  | {
+      type: "SET_PARTICLE_EFFECT";
+      payload: "none" | "snow" | "dust" | "sparkles";
+    }
+  | { type: "SET_RESOLUTION_PRESET"; payload: "story" | "square" | "landscape" }
+  | { type: "SET_CANVAS_ZOOM"; payload: number }
+  | { type: "TOGGLE_LAYER_LIST" }
+  | { type: "TOGGLE_SNAP_GUIDES" };
 
 // Mock data
 export const MOCK_QUOTES = [
@@ -214,6 +235,12 @@ export const initialEditorState: EditorState = {
   musicVolume: 0.5,
   musicEnabled: false,
   isMusicPlaying: false,
+
+  particleEffect: "none",
+  resolutionPreset: "story",
+  canvasZoom: 1,
+  showLayerList: false,
+  showSnapGuides: true,
 
   history: [],
   historyIndex: -1,

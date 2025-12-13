@@ -354,6 +354,45 @@ export function editorReducer(
     case "TOGGLE_MUSIC_PLAYING":
       return { ...state, isMusicPlaying: !state.isMusicPlaying };
 
+    case "SET_PARTICLE_EFFECT":
+      return { ...state, particleEffect: action.payload };
+
+    case "SET_RESOLUTION_PRESET": {
+      // Get new dimensions
+      const dimensions = {
+        story: { width: 1080, height: 1920 },
+        square: { width: 1080, height: 1080 },
+        landscape: { width: 1920, height: 1080 },
+      };
+      const newDim = dimensions[action.payload];
+      const oldDim = dimensions[state.resolutionPreset];
+
+      // Recenter layers proportionally
+      const recenteredLayers = state.layers.map((layer) => ({
+        ...layer,
+        x: (layer.x / oldDim.width) * newDim.width,
+        y: (layer.y / oldDim.height) * newDim.height,
+      }));
+
+      return {
+        ...state,
+        resolutionPreset: action.payload,
+        layers: recenteredLayers,
+      };
+    }
+
+    case "SET_CANVAS_ZOOM":
+      return {
+        ...state,
+        canvasZoom: Math.max(0.2, Math.min(1, action.payload)),
+      };
+
+    case "TOGGLE_LAYER_LIST":
+      return { ...state, showLayerList: !state.showLayerList };
+
+    case "TOGGLE_SNAP_GUIDES":
+      return { ...state, showSnapGuides: !state.showSnapGuides };
+
     default:
       return state;
   }
