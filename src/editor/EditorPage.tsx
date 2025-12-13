@@ -241,6 +241,10 @@ const EditorPage = () => {
               activeTab={state.activeRightTab}
               activePresetId={state.activePresetId}
               textAnimation={state.textAnimation}
+              selectedMusicId={state.selectedMusicId}
+              musicVolume={state.musicVolume}
+              musicEnabled={state.musicEnabled}
+              isMusicPlaying={state.isMusicPlaying}
               fontFamily={state.fontFamily}
               fontSize={state.fontSize}
               textColor={state.textColor}
@@ -273,6 +277,18 @@ const EditorPage = () => {
               }
               onSetTextAnimation={(animation) =>
                 dispatch({ type: "SET_TEXT_ANIMATION", payload: animation })
+              }
+              onSetMusicTrack={(trackId) =>
+                dispatch({ type: "SET_MUSIC_TRACK", payload: trackId })
+              }
+              onSetMusicVolume={(volume) =>
+                dispatch({ type: "SET_MUSIC_VOLUME", payload: volume })
+              }
+              onToggleMusicEnabled={() =>
+                dispatch({ type: "TOGGLE_MUSIC_ENABLED" })
+              }
+              onToggleMusicPlaying={() =>
+                dispatch({ type: "TOGGLE_MUSIC_PLAYING" })
               }
             />
           </div>

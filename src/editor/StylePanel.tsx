@@ -8,6 +8,14 @@ import {
   getPresetsByCategory,
 } from "./stylePresets";
 import { AnimationType } from "./animation";
+import {
+  MUSIC_TRACKS,
+  getTrackById,
+  getAllGenres,
+  getGenreLabel,
+  getTracksByGenre,
+  formatDuration,
+} from "./music";
 
 // Animation options with icons and labels
 const ANIMATION_OPTIONS: {
@@ -41,6 +49,12 @@ interface StylePanelProps {
   activeTab: "style" | "image";
   activePresetId: string | null;
   textAnimation: string;
+  // Music props
+  selectedMusicId: string | null;
+  musicVolume: number;
+  musicEnabled: boolean;
+  isMusicPlaying: boolean;
+  // Other style props
   fontFamily: string;
   fontSize: number;
   textColor: string;
@@ -58,6 +72,11 @@ interface StylePanelProps {
   ) => void;
   onApplyPreset: (presetId: string) => void;
   onSetTextAnimation: (animation: string) => void;
+  // Music callbacks
+  onSetMusicTrack: (trackId: string | null) => void;
+  onSetMusicVolume: (volume: number) => void;
+  onToggleMusicEnabled: () => void;
+  onToggleMusicPlaying: () => void;
 }
 
 // Check icon SVG
@@ -77,6 +96,10 @@ const StylePanel = ({
   activeTab,
   activePresetId,
   textAnimation,
+  selectedMusicId,
+  musicVolume,
+  musicEnabled,
+  isMusicPlaying,
   fontFamily,
   fontSize,
   textColor,
@@ -92,6 +115,10 @@ const StylePanel = ({
   onSetBackgroundImage,
   onApplyPreset,
   onSetTextAnimation,
+  onSetMusicTrack,
+  onSetMusicVolume,
+  onToggleMusicEnabled,
+  onToggleMusicPlaying,
 }: StylePanelProps) => {
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(
@@ -346,6 +373,155 @@ const StylePanel = ({
                         {anim.name}
                       </span>
                     </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Music Section */}
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-primary-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                    />
+                  </svg>
+                  Music
+                </h3>
+                {/* Enable/Disable Toggle */}
+                <button
+                  onClick={onToggleMusicEnabled}
+                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${
+                    musicEnabled ? "bg-primary-500" : "bg-slate-700"
+                  }`}
+                  aria-label={musicEnabled ? "Disable music" : "Enable music"}
+                >
+                  <span
+                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      musicEnabled ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Volume Slider */}
+              <div className="mb-3">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-slate-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                    />
+                  </svg>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={musicVolume}
+                    onChange={(e) => onSetMusicVolume(Number(e.target.value))}
+                    className="flex-1 h-1.5 bg-slate-700 rounded-full appearance-none cursor-pointer
+                              [&::-webkit-slider-thumb]:appearance-none
+                              [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                              [&::-webkit-slider-thumb]:bg-primary-500 [&::-webkit-slider-thumb]:rounded-full
+                              [&::-webkit-slider-thumb]:cursor-pointer"
+                    disabled={!musicEnabled}
+                  />
+                  <span className="text-xs text-slate-400 w-8 text-right">
+                    {Math.round(musicVolume * 100)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Track List */}
+              <div
+                className={`space-y-1 max-h-40 overflow-y-auto ${
+                  !musicEnabled && "opacity-50 pointer-events-none"
+                }`}
+              >
+                {MUSIC_TRACKS.slice(0, 6).map((track) => {
+                  const isSelected = selectedMusicId === track.id;
+                  const isPlaying = isSelected && isMusicPlaying;
+                  return (
+                    <div
+                      key={track.id}
+                      className={`flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-primary-500/20 ring-1 ring-primary-500/50"
+                          : "bg-slate-800/50 hover:bg-slate-700/50"
+                      }`}
+                      onClick={() => onSetMusicTrack(track.id)}
+                    >
+                      {/* Play/Pause Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isSelected) {
+                            onToggleMusicPlaying();
+                          } else {
+                            onSetMusicTrack(track.id);
+                          }
+                        }}
+                        className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-primary-500 text-white"
+                            : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+                        }`}
+                      >
+                        {isPlaying ? (
+                          <svg
+                            className="w-3 h-3"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="w-3 h-3 ml-0.5"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        )}
+                      </button>
+
+                      {/* Track Info */}
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-xs font-medium truncate ${
+                            isSelected ? "text-primary-300" : "text-slate-300"
+                          }`}
+                        >
+                          {track.name}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {formatDuration(track.duration)}
+                        </p>
+                      </div>
+
+                      {/* Selected indicator */}
+                      {isSelected && (
+                        <div className="w-1.5 h-1.5 bg-primary-500 rounded-full" />
+                      )}
+                    </div>
                   );
                 })}
               </div>
