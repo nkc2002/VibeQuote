@@ -2,20 +2,12 @@ import { useState } from "react";
 import { MOCK_FONTS, MOCK_COLORS, MOCK_GRADIENTS, MOCK_IMAGES } from "./types";
 import { ImagePickerModal } from "../image-picker";
 import {
-  STYLE_PRESETS,
   getAllCategories,
   getCategoryLabel,
   getPresetsByCategory,
 } from "./stylePresets";
 import { AnimationType } from "./animation";
-import {
-  MUSIC_TRACKS,
-  getTrackById,
-  getAllGenres,
-  getGenreLabel,
-  getTracksByGenre,
-  formatDuration,
-} from "./music";
+import { MUSIC_TRACKS, formatDuration } from "./music";
 
 // Animation options with icons and labels
 const ANIMATION_OPTIONS: {
