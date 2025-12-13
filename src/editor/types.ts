@@ -35,6 +35,7 @@ export interface EditorState {
   fontSize: number;
   textColor: string;
   boxOpacity: number;
+  activePresetId: string | null;
 
   // History for undo/redo
   history: EditorHistoryItem[];
@@ -182,6 +183,7 @@ export const initialEditorState: EditorState = {
   fontSize: 48,
   textColor: "#FFFFFF",
   boxOpacity: 0,
+  activePresetId: null,
 
   history: [],
   historyIndex: -1,

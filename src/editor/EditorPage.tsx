@@ -239,6 +239,7 @@ const EditorPage = () => {
           >
             <StylePanel
               activeTab={state.activeRightTab}
+              activePresetId={state.activePresetId}
               fontFamily={state.fontFamily}
               fontSize={state.fontSize}
               textColor={state.textColor}

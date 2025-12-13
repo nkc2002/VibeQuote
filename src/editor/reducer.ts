@@ -308,6 +308,7 @@ export function editorReducer(
         fontSize: preset.fontSize,
         textColor: preset.textColor,
         boxOpacity: preset.overlayOpacity ?? state.boxOpacity,
+        activePresetId: action.payload,
         history: newHistory,
         historyIndex: newHistory.length - 1,
       };
