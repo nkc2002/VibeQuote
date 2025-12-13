@@ -334,6 +334,26 @@ export function editorReducer(
     case "SET_ANIMATION_PROGRESS":
       return { ...state, animationProgress: action.payload };
 
+    case "SET_MUSIC_TRACK":
+      return {
+        ...state,
+        selectedMusicId: action.payload,
+        musicEnabled: action.payload !== null,
+      };
+
+    case "SET_MUSIC_VOLUME":
+      return { ...state, musicVolume: action.payload };
+
+    case "TOGGLE_MUSIC_ENABLED":
+      return {
+        ...state,
+        musicEnabled: !state.musicEnabled,
+        isMusicPlaying: !state.musicEnabled ? state.isMusicPlaying : false,
+      };
+
+    case "TOGGLE_MUSIC_PLAYING":
+      return { ...state, isMusicPlaying: !state.isMusicPlaying };
+
     default:
       return state;
   }

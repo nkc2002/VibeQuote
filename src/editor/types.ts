@@ -43,6 +43,12 @@ export interface EditorState {
   isAnimationPlaying: boolean;
   animationProgress: number; // 0-1
 
+  // Music settings (for preview)
+  selectedMusicId: string | null;
+  musicVolume: number; // 0-1
+  musicEnabled: boolean;
+  isMusicPlaying: boolean;
+
   // History for undo/redo
   history: EditorHistoryItem[];
   historyIndex: number;
@@ -101,7 +107,11 @@ export type EditorAction =
   | { type: "SET_TEXT_ANIMATION"; payload: string }
   | { type: "SET_BG_ANIMATION"; payload: string }
   | { type: "TOGGLE_ANIMATION" }
-  | { type: "SET_ANIMATION_PROGRESS"; payload: number };
+  | { type: "SET_ANIMATION_PROGRESS"; payload: number }
+  | { type: "SET_MUSIC_TRACK"; payload: string | null }
+  | { type: "SET_MUSIC_VOLUME"; payload: number }
+  | { type: "TOGGLE_MUSIC_ENABLED" }
+  | { type: "TOGGLE_MUSIC_PLAYING" };
 
 // Mock data
 export const MOCK_QUOTES = [
@@ -199,6 +209,11 @@ export const initialEditorState: EditorState = {
   backgroundAnimation: "zoomIn",
   isAnimationPlaying: false,
   animationProgress: 0,
+
+  selectedMusicId: null,
+  musicVolume: 0.5,
+  musicEnabled: false,
+  isMusicPlaying: false,
 
   history: [],
   historyIndex: -1,
