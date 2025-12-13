@@ -96,11 +96,29 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         img.src = imageDataUrl;
       });
 
-      // Step 4: Setup MediaRecorder
+      // Step 4: Setup MediaRecorder with best supported MIME type
       setProgress(30);
-      const stream = canvas.captureStream(30); // 30 fps
+      const FPS = 30;
+      const stream = canvas.captureStream(FPS); // Video-only stream (no audio)
+
+      // Detect best supported MIME type
+      const mimeTypes = [
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8",
+        "video/webm",
+        "video/mp4",
+      ];
+      let selectedMimeType = "video/webm";
+      for (const mimeType of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          selectedMimeType = mimeType;
+          break;
+        }
+      }
+      console.log("[VideoExport] Using MIME type:", selectedMimeType);
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: "video/webm;codecs=vp9",
+        mimeType: selectedMimeType,
         videoBitsPerSecond: options.quality === "1080p" ? 8000000 : 4000000,
       });
 
@@ -113,7 +131,6 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
 
       // Step 5: Record video frames with animation system
       const durationMs = options.duration * 1000;
-      const FPS = 30;
       const totalFrames = Math.floor(options.duration * FPS);
 
       mediaRecorder.start(100); // Request data every 100ms
@@ -155,7 +172,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         if (elapsed < durationMs) {
           requestAnimationFrame(drawFrame);
         } else {
-          // Stop recording
+          // Stop recording exactly when duration ends
           mediaRecorder.stop();
         }
       };
@@ -163,13 +180,35 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       // Start drawing
       requestAnimationFrame(drawFrame);
 
-      // Wait for recording to complete
+      // Wait for recording to complete and auto-download
       await new Promise<void>((resolve) => {
         mediaRecorder.onstop = () => {
           setProgress(95);
-          const blob = new Blob(chunks, { type: "video/webm" });
+
+          // Determine file extension based on MIME type
+          const extension = selectedMimeType.includes("mp4") ? "mp4" : "webm";
+          const blob = new Blob(chunks, {
+            type: selectedMimeType.split(";")[0],
+          });
           setVideoBlob(blob);
+
+          // Auto-trigger download
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `vibequote-${Date.now()}.${extension}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
           setProgress(100);
+          console.log("[VideoExport] Video exported:", {
+            size: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
+            duration: `${options.duration}s`,
+            quality: options.quality,
+            mimeType: selectedMimeType,
+          });
           resolve();
         };
       });
