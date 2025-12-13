@@ -1,0 +1,513 @@
+/**
+ * VideoExportModal - Client-side video export with progress UI
+ *
+ * Features:
+ * - Duration selection: 5s / 10s / 15s
+ * - Quality selection: 720p / 1080p
+ * - Animated progress indicator
+ * - Success state with download button
+ */
+
+import { useState, useEffect, useCallback } from "react";
+
+// Export options
+export interface VideoExportOptions {
+  duration: 5 | 10 | 15;
+  quality: "720p" | "1080p";
+}
+
+// Modal states
+type ExportState = "options" | "exporting" | "success" | "error";
+
+interface VideoExportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  captureCanvas: () => Promise<string>; // Returns base64 data URL
+  onExportComplete?: () => void;
+}
+
+const VideoExportModal: React.FC<VideoExportModalProps> = ({
+  isOpen,
+  onClose,
+  captureCanvas,
+  onExportComplete,
+}) => {
+  const [exportState, setExportState] = useState<ExportState>("options");
+  const [options, setOptions] = useState<VideoExportOptions>({
+    duration: 5,
+    quality: "1080p",
+  });
+  const [progress, setProgress] = useState(0);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setExportState("options");
+      setProgress(0);
+      setVideoBlob(null);
+      setErrorMessage("");
+    }
+  }, [isOpen]);
+
+  // Get resolution based on quality
+  const getResolution = (quality: "720p" | "1080p") => {
+    return quality === "1080p"
+      ? { width: 1920, height: 1080 }
+      : { width: 1280, height: 720 };
+  };
+
+  // Client-side video export using Canvas + MediaRecorder
+  const handleExport = useCallback(async () => {
+    setExportState("exporting");
+    setProgress(0);
+
+    try {
+      // Step 1: Capture canvas as image
+      setProgress(10);
+      const imageDataUrl = await captureCanvas();
+
+      // Step 2: Create offscreen canvas for video
+      const { width, height } = getResolution(options.quality);
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        throw new Error("Cannot create canvas context");
+      }
+
+      // Step 3: Load image
+      setProgress(20);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = imageDataUrl;
+      });
+
+      // Step 4: Setup MediaRecorder
+      setProgress(30);
+      const stream = canvas.captureStream(30); // 30 fps
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "video/webm;codecs=vp9",
+        videoBitsPerSecond: options.quality === "1080p" ? 8000000 : 4000000,
+      });
+
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      // Step 5: Record video frames
+      const durationMs = options.duration * 1000;
+      const fps = 30;
+      const totalFrames = Math.floor(options.duration * fps);
+      let currentFrame = 0;
+
+      mediaRecorder.start();
+
+      // Animation loop - draw image with subtle zoom effect
+      const startTime = Date.now();
+
+      const drawFrame = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / durationMs, 1);
+
+        // Clear and draw with subtle zoom
+        ctx.clearRect(0, 0, width, height);
+
+        // Subtle zoom: 1.0 -> 1.05 over duration
+        const scale = 1 + progress * 0.05;
+        const offsetX = (width * (scale - 1)) / 2;
+        const offsetY = (height * (scale - 1)) / 2;
+
+        ctx.drawImage(img, -offsetX, -offsetY, width * scale, height * scale);
+
+        currentFrame++;
+        setProgress(30 + Math.floor((currentFrame / totalFrames) * 60));
+
+        if (elapsed < durationMs) {
+          requestAnimationFrame(drawFrame);
+        } else {
+          // Stop recording
+          mediaRecorder.stop();
+        }
+      };
+
+      // Start drawing
+      requestAnimationFrame(drawFrame);
+
+      // Wait for recording to complete
+      await new Promise<void>((resolve) => {
+        mediaRecorder.onstop = () => {
+          setProgress(95);
+          const blob = new Blob(chunks, { type: "video/webm" });
+          setVideoBlob(blob);
+          setProgress(100);
+          resolve();
+        };
+      });
+
+      setExportState("success");
+      onExportComplete?.();
+    } catch (error) {
+      console.error("[VideoExport] Error:", error);
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unknown error occurred"
+      );
+      setExportState("error");
+    }
+  }, [captureCanvas, options, onExportComplete]);
+
+  // Download video
+  const handleDownload = useCallback(() => {
+    if (!videoBlob) return;
+
+    const url = URL.createObjectURL(videoBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vibequote-${Date.now()}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [videoBlob]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={exportState === "options" ? onClose : undefined}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-slate-900 rounded-2xl shadow-2xl border border-slate-700/50 w-full max-w-md mx-4 overflow-hidden">
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4">
+          {exportState === "options" && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-1">
+                Tạo Video
+              </h2>
+              <p className="text-slate-400 text-sm">Chọn thông số xuất video</p>
+            </>
+          )}
+
+          {exportState === "exporting" && (
+            <>
+              <h2 className="text-xl font-semibold text-white mb-1">
+                Đang tạo video...
+              </h2>
+              <p className="text-amber-400 text-sm flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 animate-pulse"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Vui lòng không chuyển tab trong quá trình tạo video
+              </p>
+            </>
+          )}
+
+          {exportState === "success" && (
+            <>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-white">
+                  Video đã sẵn sàng
+                </h2>
+              </div>
+              <p className="text-slate-400 text-sm">
+                Video của bạn đã được tạo thành công
+              </p>
+            </>
+          )}
+
+          {exportState === "error" && (
+            <>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-red-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-white">
+                  Có lỗi xảy ra
+                </h2>
+              </div>
+              <p className="text-red-400 text-sm">{errorMessage}</p>
+            </>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="px-6 pb-6">
+          {/* Options State */}
+          {exportState === "options" && (
+            <div className="space-y-5">
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Thời lượng
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([5, 10, 15] as const).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() =>
+                        setOptions((prev) => ({ ...prev, duration: d }))
+                      }
+                      className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                        options.duration === d
+                          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/25"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {d} giây
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quality */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Chất lượng
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["720p", "1080p"] as const).map((q) => (
+                    <button
+                      key={q}
+                      onClick={() =>
+                        setOptions((prev) => ({ ...prev, quality: q }))
+                      }
+                      className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                        options.quality === q
+                          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/25"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {q}
+                      <span className="block text-xs opacity-70 mt-0.5">
+                        {q === "1080p" ? "1920×1080" : "1280×720"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleExport}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-gradient-to-r from-primary-500 to-secondary-500 text-white hover:opacity-90 transition-opacity shadow-lg shadow-primary-500/25"
+                >
+                  Tạo Video
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Exporting State */}
+          {exportState === "exporting" && (
+            <div className="py-4">
+              {/* Progress Ring */}
+              <div className="flex justify-center mb-6">
+                <div className="relative w-24 h-24">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="40"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      className="text-slate-700"
+                    />
+                    <circle
+                      cx="48"
+                      cy="48"
+                      r="40"
+                      stroke="url(#progress-gradient)"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={251.2}
+                      strokeDashoffset={251.2 - (251.2 * progress) / 100}
+                      className="transition-all duration-300"
+                    />
+                    <defs>
+                      <linearGradient
+                        id="progress-gradient"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%"
+                      >
+                        <stop offset="0%" stopColor="#8B5CF6" />
+                        <stop offset="100%" stopColor="#EC4899" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-xl font-semibold text-white">
+                    {progress}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+
+              <p className="text-center text-slate-400 text-sm mt-4">
+                {progress < 30 && "Đang chuẩn bị..."}
+                {progress >= 30 && progress < 90 && "Đang render video..."}
+                {progress >= 90 && "Đang hoàn tất..."}
+              </p>
+            </div>
+          )}
+
+          {/* Success State */}
+          {exportState === "success" && (
+            <div className="py-4">
+              {/* Video Preview */}
+              {videoBlob && (
+                <div className="mb-4 rounded-lg overflow-hidden bg-black">
+                  <video
+                    src={URL.createObjectURL(videoBlob)}
+                    controls
+                    autoPlay
+                    loop
+                    muted
+                    className="w-full"
+                  />
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="bg-slate-800/50 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Thời lượng</span>
+                  <span className="text-white">{options.duration} giây</span>
+                </div>
+                <div className="flex items-center justify-between text-sm mt-2">
+                  <span className="text-slate-400">Chất lượng</span>
+                  <span className="text-white">{options.quality}</span>
+                </div>
+                {videoBlob && (
+                  <div className="flex items-center justify-between text-sm mt-2">
+                    <span className="text-slate-400">Kích thước</span>
+                    <span className="text-white">
+                      {(videoBlob.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:opacity-90 transition-opacity shadow-lg shadow-green-500/25 flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Tải xuống
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {exportState === "error" && (
+            <div className="py-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={() => setExportState("options")}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-primary-500 text-white hover:bg-primary-600 transition-colors"
+                >
+                  Thử lại
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VideoExportModal;

@@ -1,15 +1,17 @@
-import { useReducer, useEffect, useCallback, useRef } from "react";
+import { useReducer, useEffect, useCallback, useRef, useState } from "react";
 import { initialEditorState } from "./types";
 import { editorReducer } from "./reducer";
 import Toolbar from "./Toolbar";
 import QuotePanel from "./QuotePanel";
 import Canvas, { CanvasRef } from "./Canvas";
 import StylePanel from "./StylePanel";
+import VideoExportModal from "./VideoExportModal";
 import { videosApi } from "../api";
 
 const EditorPage = () => {
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
   const canvasComponentRef = useRef<CanvasRef>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -74,7 +76,8 @@ const EditorPage = () => {
     []
   );
 
-  const handleGenerate = useCallback(async () => {
+  // Open video export modal instead of calling server API
+  const handleGenerate = useCallback(() => {
     // Validation
     if (!state.backgroundImage) {
       alert("Vui lòng chọn một hình nền trước khi tạo video.");
@@ -91,72 +94,37 @@ const EditorPage = () => {
       return;
     }
 
-    dispatch({ type: "SET_GENERATING", payload: true });
+    // Open the export modal
+    setIsExportModalOpen(true);
+  }, [state.backgroundImage, state.quoteText, state.authorText]);
 
+  // Capture canvas as data URL for video export
+  const captureCanvas = useCallback(async () => {
+    if (!canvasComponentRef.current) {
+      throw new Error("Canvas not ready");
+    }
+    return canvasComponentRef.current.captureAsDataURL();
+  }, []);
+
+  // Save video metadata after export
+  const handleExportComplete = useCallback(async () => {
     try {
-      // Capture the canvas as a data URL (includes background + text)
-      console.log("[Generate] Capturing canvas...");
-      const imageDataUrl = await canvasComponentRef.current.captureAsDataURL();
-      console.log("[Generate] Canvas captured, size:", imageDataUrl.length);
-
-      // Send captured image to API
-      const response = await fetch("/api/generate-low-quality-video", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          imageDataUrl, // Base64 image with text baked in
-        }),
+      await videosApi.create({
+        thumbnail: state.backgroundImage || "",
+        quoteText: state.quoteText,
+        authorText: state.authorText || "",
+        templateId: state.template || "center",
+        templateName: state.template === "center" ? "Center" : "Bottom",
+        fontSize: state.fontSize,
+        fontFamily: state.fontFamily,
+        textColor: state.textColor,
+        boxOpacity: state.boxOpacity,
+        canvasWidth: state.canvasWidth,
+        canvasHeight: state.canvasHeight,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to generate video");
-      }
-
-      // Handle download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `vibequote-${Date.now()}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-
-      // Save video metadata to MongoDB via API (including style for consistent regeneration)
-      try {
-        await videosApi.create({
-          thumbnail: state.backgroundImage || "",
-          quoteText: state.quoteText,
-          authorText: state.authorText || "",
-          templateId: state.template || "center",
-          templateName: state.template === "center" ? "Center" : "Bottom",
-          // Save style parameters for identical regeneration
-          fontSize: state.fontSize,
-          fontFamily: state.fontFamily,
-          textColor: state.textColor,
-          boxOpacity: state.boxOpacity,
-          canvasWidth: state.canvasWidth,
-          canvasHeight: state.canvasHeight,
-        });
-        console.log("Video saved to database");
-      } catch (saveError) {
-        console.error("Failed to save video to database:", saveError);
-      }
-
-      // Success feedback
-      console.log("Video generated successfully");
+      console.log("Video saved to database");
     } catch (error) {
-      console.error("Video generation error:", error);
-      alert(
-        error instanceof Error ? error.message : "Có lỗi xảy ra khi tạo video"
-      );
-    } finally {
-      dispatch({ type: "SET_GENERATING", payload: false });
+      console.error("Failed to save video to database:", error);
     }
   }, [
     state.backgroundImage,
@@ -164,9 +132,9 @@ const EditorPage = () => {
     state.authorText,
     state.template,
     state.fontSize,
+    state.fontFamily,
     state.textColor,
     state.boxOpacity,
-    state.fontFamily,
     state.canvasWidth,
     state.canvasHeight,
   ]);
@@ -356,6 +324,14 @@ const EditorPage = () => {
           Remove layer
         </span>
       </div>
+
+      {/* Video Export Modal */}
+      <VideoExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        captureCanvas={captureCanvas}
+        onExportComplete={handleExportComplete}
+      />
     </div>
   );
 };
