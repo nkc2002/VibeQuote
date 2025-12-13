@@ -19,8 +19,12 @@ export type AnimationType =
   | "fadeOut"
   | "slideUp"
   | "slideDown"
+  | "slideLeft"
+  | "slideRight"
   | "zoomIn"
-  | "zoomOut";
+  | "zoomOut"
+  | "scaleUp"
+  | "typewriter";
 
 export type EasingType =
   | "linear"
@@ -32,8 +36,10 @@ export type EasingType =
 export interface AnimationKeyframe {
   time: number; // 0-1 (percentage of total duration)
   opacity?: number;
+  translateX?: number; // pixels
   translateY?: number; // pixels
   scale?: number;
+  charProgress?: number; // 0-1 for typewriter effect
 }
 
 export interface LayerAnimation {
@@ -45,8 +51,10 @@ export interface LayerAnimation {
 
 export interface AnimationState {
   opacity: number;
+  translateX: number;
   translateY: number;
   scale: number;
+  charProgress: number; // 0-1 for typewriter
 }
 
 export interface AnimationConfig {
@@ -73,7 +81,16 @@ export const ANIMATION_PRESETS: Record<
   { keyframes: AnimationKeyframe[]; easing: EasingType }
 > = {
   none: {
-    keyframes: [{ time: 0, opacity: 1, translateY: 0, scale: 1 }],
+    keyframes: [
+      {
+        time: 0,
+        opacity: 1,
+        translateX: 0,
+        translateY: 0,
+        scale: 1,
+        charProgress: 1,
+      },
+    ],
     easing: "linear",
   },
   fadeIn: {
@@ -104,6 +121,20 @@ export const ANIMATION_PRESETS: Record<
     ],
     easing: "easeOut",
   },
+  slideLeft: {
+    keyframes: [
+      { time: 0, opacity: 0, translateX: 80 },
+      { time: 0.3, opacity: 1, translateX: 0 },
+    ],
+    easing: "easeOut",
+  },
+  slideRight: {
+    keyframes: [
+      { time: 0, opacity: 0, translateX: -80 },
+      { time: 0.3, opacity: 1, translateX: 0 },
+    ],
+    easing: "easeOut",
+  },
   zoomIn: {
     keyframes: [
       { time: 0, scale: 1.0 },
@@ -115,6 +146,20 @@ export const ANIMATION_PRESETS: Record<
     keyframes: [
       { time: 0, scale: 1.05 },
       { time: 1, scale: 1.0 },
+    ],
+    easing: "linear",
+  },
+  scaleUp: {
+    keyframes: [
+      { time: 0, opacity: 0, scale: 0.8 },
+      { time: 0.3, opacity: 1, scale: 1.0 },
+    ],
+    easing: "easeOutBack",
+  },
+  typewriter: {
+    keyframes: [
+      { time: 0, charProgress: 0 },
+      { time: 0.8, charProgress: 1 },
     ],
     easing: "linear",
   },
@@ -143,18 +188,24 @@ export const easingFunctions: Record<EasingType, (t: number) => number> = {
 /**
  * Calculate interpolated value between keyframes at a given time
  */
+function getPropertyDefault(
+  property: keyof Omit<AnimationKeyframe, "time">
+): number {
+  if (property === "opacity") return 1;
+  if (property === "scale") return 1;
+  if (property === "charProgress") return 1;
+  return 0; // translateX, translateY default to 0
+}
+
 export function interpolateKeyframes(
   keyframes: AnimationKeyframe[],
   time: number,
   property: keyof Omit<AnimationKeyframe, "time">,
   easing: EasingType = "linear"
 ): number {
-  if (keyframes.length === 0) return property === "opacity" ? 1 : 0;
-  if (keyframes.length === 1)
-    return (
-      keyframes[0][property] ??
-      (property === "opacity" ? 1 : property === "scale" ? 1 : 0)
-    );
+  const defaultValue = getPropertyDefault(property);
+  if (keyframes.length === 0) return defaultValue;
+  if (keyframes.length === 1) return keyframes[0][property] ?? defaultValue;
 
   // Find surrounding keyframes
   let startFrame = keyframes[0];
@@ -170,27 +221,17 @@ export function interpolateKeyframes(
 
   // Before first keyframe
   if (time <= startFrame.time) {
-    return (
-      startFrame[property] ??
-      (property === "opacity" ? 1 : property === "scale" ? 1 : 0)
-    );
+    return startFrame[property] ?? defaultValue;
   }
 
   // After last keyframe
   if (time >= endFrame.time) {
-    return (
-      endFrame[property] ??
-      (property === "opacity" ? 1 : property === "scale" ? 1 : 0)
-    );
+    return endFrame[property] ?? defaultValue;
   }
 
   // Interpolate
-  const startValue =
-    startFrame[property] ??
-    (property === "opacity" ? 1 : property === "scale" ? 1 : 0);
-  const endValue =
-    endFrame[property] ??
-    (property === "opacity" ? 1 : property === "scale" ? 1 : 0);
+  const startValue = startFrame[property] ?? defaultValue;
+  const endValue = endFrame[property] ?? defaultValue;
   const localProgress =
     (time - startFrame.time) / (endFrame.time - startFrame.time);
   const easedProgress = easingFunctions[easing](localProgress);
@@ -214,6 +255,12 @@ export function getAnimationState(
       "opacity",
       preset.easing
     ),
+    translateX: interpolateKeyframes(
+      preset.keyframes,
+      time,
+      "translateX",
+      preset.easing
+    ),
     translateY: interpolateKeyframes(
       preset.keyframes,
       time,
@@ -221,6 +268,12 @@ export function getAnimationState(
       preset.easing
     ),
     scale: interpolateKeyframes(preset.keyframes, time, "scale", preset.easing),
+    charProgress: interpolateKeyframes(
+      preset.keyframes,
+      time,
+      "charProgress",
+      preset.easing
+    ),
   };
 }
 
@@ -233,10 +286,12 @@ export function combineAnimationStates(
   return states.reduce(
     (combined, state) => ({
       opacity: combined.opacity * state.opacity,
+      translateX: combined.translateX + state.translateX,
       translateY: combined.translateY + state.translateY,
       scale: combined.scale * state.scale,
+      charProgress: Math.min(combined.charProgress, state.charProgress),
     }),
-    { opacity: 1, translateY: 0, scale: 1 }
+    { opacity: 1, translateX: 0, translateY: 0, scale: 1, charProgress: 1 }
   );
 }
 

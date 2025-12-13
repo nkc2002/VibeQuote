@@ -37,6 +37,12 @@ export interface EditorState {
   boxOpacity: number;
   activePresetId: string | null;
 
+  // Animation settings (for preview)
+  textAnimation: string; // AnimationType
+  backgroundAnimation: string; // AnimationType
+  isAnimationPlaying: boolean;
+  animationProgress: number; // 0-1
+
   // History for undo/redo
   history: EditorHistoryItem[];
   historyIndex: number;
@@ -91,7 +97,11 @@ export type EditorAction =
   | { type: "TOGGLE_RIGHT_SIDEBAR" }
   | { type: "SET_RIGHT_TAB"; payload: "style" | "image" }
   | { type: "APPLY_QUOTE_TO_CANVAS" }
-  | { type: "APPLY_STYLE_PRESET"; payload: string }; // preset ID
+  | { type: "APPLY_STYLE_PRESET"; payload: string }
+  | { type: "SET_TEXT_ANIMATION"; payload: string }
+  | { type: "SET_BG_ANIMATION"; payload: string }
+  | { type: "TOGGLE_ANIMATION" }
+  | { type: "SET_ANIMATION_PROGRESS"; payload: number };
 
 // Mock data
 export const MOCK_QUOTES = [
@@ -184,6 +194,11 @@ export const initialEditorState: EditorState = {
   textColor: "#FFFFFF",
   boxOpacity: 0,
   activePresetId: null,
+
+  textAnimation: "fadeIn",
+  backgroundAnimation: "zoomIn",
+  isAnimationPlaying: false,
+  animationProgress: 0,
 
   history: [],
   historyIndex: -1,

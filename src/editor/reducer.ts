@@ -309,10 +309,30 @@ export function editorReducer(
         textColor: preset.textColor,
         boxOpacity: preset.overlayOpacity ?? state.boxOpacity,
         activePresetId: action.payload,
+        textAnimation: preset.animation ?? state.textAnimation,
+        backgroundAnimation: state.backgroundAnimation, // Keep user's selection
         history: newHistory,
         historyIndex: newHistory.length - 1,
       };
     }
+
+    case "SET_TEXT_ANIMATION":
+      return { ...state, textAnimation: action.payload };
+
+    case "SET_BG_ANIMATION":
+      return { ...state, backgroundAnimation: action.payload };
+
+    case "TOGGLE_ANIMATION":
+      return {
+        ...state,
+        isAnimationPlaying: !state.isAnimationPlaying,
+        animationProgress: state.isAnimationPlaying
+          ? state.animationProgress
+          : 0,
+      };
+
+    case "SET_ANIMATION_PROGRESS":
+      return { ...state, animationProgress: action.payload };
 
     default:
       return state;
