@@ -47,7 +47,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [browserWarning, setBrowserWarning] = useState("");
-  const [isCancelled, setIsCancelled] = useState(false);
+  const [, setIsCancelled] = useState(false);
 
   // Refs for resource cleanup and concurrent export prevention
   const isExportingRef = useRef(false);

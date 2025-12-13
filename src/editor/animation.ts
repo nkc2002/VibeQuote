@@ -267,8 +267,6 @@ export function createTimelineController(
   let startTimestamp: number | null = null;
   let animationFrameId: number | null = null;
 
-  const frameInterval = 1000 / config.fps;
-
   const animate = (timestamp: number) => {
     if (!startTimestamp) startTimestamp = timestamp;
 
