@@ -18,8 +18,6 @@ import dotenv from "dotenv";
 import authRouter from "./routes/auth";
 import imagesRouter from "./routes/images";
 import videosRouter from "./routes/videos";
-import generateVideoRouter from "./routes/generate-video";
-import renderVideoRouter from "./routes/render-video";
 
 // Models & Middleware
 import {
@@ -80,7 +78,6 @@ app.get("/api/health", async (_req, res) => {
       mongodb: mongoConnected,
       unsplash: !!process.env.UNSPLASH_ACCESS_KEY,
       s3: !!(process.env.S3_BUCKET && process.env.AWS_ACCESS_KEY_ID),
-      ffmpeg: !!process.env.FFMPEG_URL || "system",
     },
   });
 });
@@ -92,14 +89,8 @@ app.get("/api/health", async (_req, res) => {
 // Images API - protected
 app.use("/api/images", authMiddleware, apiLimiter, imagesRouter);
 
-// Videos CRUD - protected
+// Videos metadata CRUD - protected
 app.use("/api/videos", authMiddleware, apiLimiter, videosRouter);
-
-// Video generation - protected
-app.use("/api/generate-video", authMiddleware, apiLimiter, generateVideoRouter);
-
-// New precise video rendering endpoint - protected
-app.use("/api/render-video", authMiddleware, apiLimiter, renderVideoRouter);
 
 // ============================================================
 // Error Handling
@@ -158,15 +149,10 @@ if (process.env.NODE_ENV !== "test") {
       }`
     );
     console.log(
-      `🎬 FFmpeg: ${
-        process.env.FFMPEG_URL ? "✓ Will download" : "Using system"
-      }`
-    );
-    console.log(
       `☁️  S3: ${
         process.env.S3_BUCKET && process.env.AWS_ACCESS_KEY_ID
           ? `✓ Configured (${process.env.S3_BUCKET})`
-          : "✗ NOT CONFIGURED (videos will be streamed only)"
+          : "✗ NOT CONFIGURED"
       }`
     );
   });
