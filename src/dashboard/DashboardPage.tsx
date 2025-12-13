@@ -136,141 +136,13 @@ const DashboardPage = () => {
     loadVideos();
   }, [loadVideos]);
 
-  // Handle video download - regenerate and download using saved style
-  const handleDownload = async (video: VideoRecord): Promise<void> => {
-    try {
-      // Create canvas with text baked in (same as EditorPage)
-      const canvasWidth = 640;
-      const canvasHeight = 360;
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        throw new Error("Failed to get canvas context");
-      }
-
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-
-      // Draw background image
-      if (video.thumbnail) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        const thumbnailUrl = video.thumbnail;
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error("Failed to load thumbnail"));
-          img.src = thumbnailUrl;
-        });
-
-        // Cover-fit
-        const imgRatio = img.width / img.height;
-        const canvasRatio = canvasWidth / canvasHeight;
-        let drawWidth, drawHeight, drawX, drawY;
-
-        if (imgRatio > canvasRatio) {
-          drawHeight = canvasHeight;
-          drawWidth = drawHeight * imgRatio;
-          drawX = (canvasWidth - drawWidth) / 2;
-          drawY = 0;
-        } else {
-          drawWidth = canvasWidth;
-          drawHeight = drawWidth / imgRatio;
-          drawX = 0;
-          drawY = (canvasHeight - drawHeight) / 2;
-        }
-
-        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-      } else {
-        ctx.fillStyle = "#1e293b";
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-      }
-
-      // Draw overlay
-      const boxOpacity = video.boxOpacity ?? 0.3;
-      if (boxOpacity > 0) {
-        ctx.fillStyle = `rgba(0, 0, 0, ${boxOpacity})`;
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-      }
-
-      // Draw text
-      const fontSize = Math.round(
-        (video.fontSize || 48) * (canvasWidth / 1080)
-      );
-      const fontFamily = video.fontFamily || "Inter, sans-serif";
-      const textColor = video.textColor || "#FFFFFF";
-
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.font = `${fontSize}px ${fontFamily.split(",")[0].trim()}`;
-      ctx.fillStyle = textColor;
-
-      // Text shadow
-      ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 2;
-
-      // Build full quote text
-      const fullText =
-        video.quoteText + (video.authorText ? `\n\n— ${video.authorText}` : "");
-      const lines = fullText.split("\n");
-      const lineHeight = fontSize * 1.4;
-      const totalHeight = lines.length * lineHeight;
-      const startY = canvasHeight / 2 - totalHeight / 2 + lineHeight / 2;
-
-      lines.forEach((line, index) => {
-        ctx.fillText(line, canvasWidth / 2, startY + index * lineHeight);
-      });
-
-      // Get data URL
-      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-
-      // Send to API
-      const response = await fetch("/api/generate-low-quality-video", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ imageDataUrl }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to generate video");
-      }
-
-      // Trigger download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `vibequote-${video.id}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-
-      // Track download and refresh stats
-      await videosApi.incrementDownload(video.id);
-      setDownloadCount((prev) => prev + 1);
-    } catch (error) {
-      console.error("Failed to download video:", error);
-      alert(
-        error instanceof Error ? error.message : "Có lỗi xảy ra khi tải video"
-      );
-      throw error;
-    }
-  };
-
   const handleDelete = async (video: VideoRecord) => {
     try {
       await videosApi.delete(video.id);
       await loadVideos();
     } catch (error) {
       console.error("Failed to delete video:", error);
-      alert("Không thể xóa video. Vui lòng thử lại.");
+      alert("Không thể xóa. Vui lòng thử lại.");
     }
   };
 
@@ -382,14 +254,17 @@ const DashboardPage = () => {
         </div>
 
         {/* Section header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-heading font-bold text-slate-900">
-            Video của tôi
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-slate-900">
+              Các quote đã lưu
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Video được tạo khi bạn nhấn Generate Video trong Editor
+            </p>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500">
-              {videos.length} video
-            </span>
+            <span className="text-sm text-slate-500">{videos.length} mục</span>
           </div>
         </div>
 
@@ -427,12 +302,7 @@ const DashboardPage = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {videos.map((video) => (
-              <VideoCard
-                key={video.id}
-                video={video}
-                onDownload={handleDownload}
-                onDelete={handleDelete}
-              />
+              <VideoCard key={video.id} video={video} onDelete={handleDelete} />
             ))}
           </div>
         )}
