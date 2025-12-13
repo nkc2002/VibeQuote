@@ -4,16 +4,20 @@
  * Features:
  * - Duration selection: 5s / 10s / 15s
  * - Quality selection: 720p / 1080p
+ * - Uses animation system for consistent preview/export
  * - Animated progress indicator
  * - Success state with download button
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { AnimationType, getAnimationState } from "./animation";
 
 // Export options
 export interface VideoExportOptions {
   duration: 5 | 10 | 15;
   quality: "720p" | "1080p";
+  backgroundAnimation: AnimationType;
+  textAnimation: AnimationType;
 }
 
 // Modal states
@@ -36,6 +40,8 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
   const [options, setOptions] = useState<VideoExportOptions>({
     duration: 5,
     quality: "1080p",
+    backgroundAnimation: "zoomIn",
+    textAnimation: "fadeIn",
   });
   const [progress, setProgress] = useState(0);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
@@ -105,33 +111,46 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         }
       };
 
-      // Step 5: Record video frames
+      // Step 5: Record video frames with animation system
       const durationMs = options.duration * 1000;
-      const fps = 30;
-      const totalFrames = Math.floor(options.duration * fps);
-      let currentFrame = 0;
+      const FPS = 30;
+      const totalFrames = Math.floor(options.duration * FPS);
 
-      mediaRecorder.start();
+      mediaRecorder.start(100); // Request data every 100ms
 
-      // Animation loop - draw image with subtle zoom effect
-      const startTime = Date.now();
+      // Animation loop using time-based animations
+      const startTime = performance.now();
+      let frameCount = 0;
 
-      const drawFrame = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / durationMs, 1);
+      const drawFrame = (timestamp: number) => {
+        const elapsed = timestamp - startTime;
+        const timeProgress = Math.min(elapsed / durationMs, 1);
 
-        // Clear and draw with subtle zoom
+        // Get animation states from our animation system
+        const bgState = getAnimationState(
+          options.backgroundAnimation,
+          timeProgress
+        );
+
+        // Clear canvas
         ctx.clearRect(0, 0, width, height);
 
-        // Subtle zoom: 1.0 -> 1.05 over duration
-        const scale = 1 + progress * 0.05;
+        // Apply background animation (zoom effect)
+        ctx.save();
+        const scale = bgState.scale;
         const offsetX = (width * (scale - 1)) / 2;
         const offsetY = (height * (scale - 1)) / 2;
 
-        ctx.drawImage(img, -offsetX, -offsetY, width * scale, height * scale);
+        ctx.globalAlpha = bgState.opacity;
+        ctx.translate(width / 2, height / 2);
+        ctx.scale(scale, scale);
+        ctx.translate(-width / 2, -height / 2);
+        ctx.drawImage(img, -offsetX / scale, -offsetY / scale, width, height);
+        ctx.restore();
 
-        currentFrame++;
-        setProgress(30 + Math.floor((currentFrame / totalFrames) * 60));
+        // Update progress
+        frameCount++;
+        setProgress(30 + Math.floor((frameCount / totalFrames) * 60));
 
         if (elapsed < durationMs) {
           requestAnimationFrame(drawFrame);
