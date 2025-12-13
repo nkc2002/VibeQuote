@@ -33,94 +33,68 @@ export interface MusicState {
 // ============================================================
 
 export const MUSIC_TRACKS: MusicTrack[] = [
-  // Ambient
+  // Ambient / Chill
   {
-    id: "ambient-1",
-    name: "Peaceful Morning",
+    id: "peaceful-piano",
+    name: "Peaceful Piano",
     artist: "VibeQuote Studio",
-    duration: 180,
+    duration: 204, // ~3:24
     genre: "ambient",
-    url: "/music/peaceful-morning.mp3",
+    url: "/music/peaceful-piano.mp3",
   },
   {
-    id: "ambient-2",
-    name: "Soft Horizon",
+    id: "soft-piano",
+    name: "Soft Piano",
     artist: "VibeQuote Studio",
-    duration: 210,
+    duration: 165, // ~2:45
     genre: "ambient",
-    url: "/music/soft-horizon.mp3",
-  },
-
-  // Upbeat
-  {
-    id: "upbeat-1",
-    name: "Happy Moments",
-    artist: "VibeQuote Studio",
-    duration: 150,
-    genre: "upbeat",
-    url: "/music/happy-moments.mp3",
+    url: "/music/soft-piano.mp3",
   },
   {
-    id: "upbeat-2",
-    name: "Sunny Day",
+    id: "soft-music",
+    name: "Soft Music",
     artist: "VibeQuote Studio",
-    duration: 165,
-    genre: "upbeat",
-    url: "/music/sunny-day.mp3",
+    duration: 210, // ~3:30
+    genre: "chill",
+    url: "/music/soft-music.mp3",
   },
 
   // Emotional
   {
-    id: "emotional-1",
-    name: "Deep Feelings",
+    id: "emotional",
+    name: "Emotional",
     artist: "VibeQuote Studio",
-    duration: 200,
+    duration: 136, // ~2:16
     genre: "emotional",
-    url: "/music/deep-feelings.mp3",
-  },
-  {
-    id: "emotional-2",
-    name: "Touching Heart",
-    artist: "VibeQuote Studio",
-    duration: 190,
-    genre: "emotional",
-    url: "/music/touching-heart.mp3",
+    url: "/music/emotional.mp3",
   },
 
   // Cinematic
   {
-    id: "cinematic-1",
-    name: "Epic Journey",
+    id: "cinematic-documentary",
+    name: "Cinematic Documentary",
     artist: "VibeQuote Studio",
-    duration: 240,
+    duration: 175, // ~2:55
     genre: "cinematic",
-    url: "/music/epic-journey.mp3",
-  },
-  {
-    id: "cinematic-2",
-    name: "Dramatic Rise",
-    artist: "VibeQuote Studio",
-    duration: 220,
-    genre: "cinematic",
-    url: "/music/dramatic-rise.mp3",
+    url: "/music/cinematic-documentary.mp3",
   },
 
-  // Chill
+  // Upbeat
   {
-    id: "chill-1",
-    name: "Lo-Fi Dreams",
+    id: "minimal-technology",
+    name: "Minimal Technology",
     artist: "VibeQuote Studio",
-    duration: 175,
-    genre: "chill",
-    url: "/music/lofi-dreams.mp3",
+    duration: 159, // ~2:39
+    genre: "upbeat",
+    url: "/music/minimal-technology.mp3",
   },
   {
-    id: "chill-2",
-    name: "Relaxing Vibes",
+    id: "christmas",
+    name: "Christmas",
     artist: "VibeQuote Studio",
-    duration: 185,
-    genre: "chill",
-    url: "/music/relaxing-vibes.mp3",
+    duration: 113, // ~1:53
+    genre: "upbeat",
+    url: "/music/christmas.mp3",
   },
 ];
 
