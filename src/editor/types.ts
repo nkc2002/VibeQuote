@@ -58,7 +58,6 @@ export interface EditorHistoryItem {
 // Action types
 export type EditorAction =
   | { type: "SET_QUOTE"; payload: { text: string; author: string } }
-  | { type: "SET_TEMPLATE"; payload: "center" | "bottom" }
   | { type: "SET_FONT_FAMILY"; payload: string }
   | { type: "SET_FONT_SIZE"; payload: number }
   | { type: "SET_TEXT_COLOR"; payload: string }
@@ -90,7 +89,8 @@ export type EditorAction =
   | { type: "TOGGLE_LEFT_SIDEBAR" }
   | { type: "TOGGLE_RIGHT_SIDEBAR" }
   | { type: "SET_RIGHT_TAB"; payload: "style" | "image" }
-  | { type: "APPLY_QUOTE_TO_CANVAS" };
+  | { type: "APPLY_QUOTE_TO_CANVAS" }
+  | { type: "APPLY_STYLE_PRESET"; payload: string }; // preset ID
 
 // Mock data
 export const MOCK_QUOTES = [

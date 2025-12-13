@@ -266,6 +266,9 @@ const EditorPage = () => {
               onSetBackgroundImage={(image) =>
                 dispatch({ type: "SET_BACKGROUND_IMAGE", payload: image })
               }
+              onApplyPreset={(presetId) =>
+                dispatch({ type: "APPLY_STYLE_PRESET", payload: presetId })
+              }
             />
           </div>
         </aside>

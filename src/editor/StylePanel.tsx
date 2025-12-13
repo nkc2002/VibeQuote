@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { MOCK_FONTS, MOCK_COLORS, MOCK_GRADIENTS, MOCK_IMAGES } from "./types";
 import { ImagePickerModal } from "../image-picker";
+import {
+  STYLE_PRESETS,
+  getAllCategories,
+  getCategoryLabel,
+  getPresetsByCategory,
+  StylePreset,
+} from "./stylePresets";
 
 interface StylePanelProps {
   activeTab: "style" | "image";
@@ -19,6 +26,7 @@ interface StylePanelProps {
   onSetBackgroundImage: (
     image: string | { url: string; id: string | null }
   ) => void;
+  onApplyPreset: (presetId: string) => void;
 }
 
 const StylePanel = ({
@@ -36,6 +44,7 @@ const StylePanel = ({
   onSetBoxOpacity,
   onSetBackgroundGradient,
   onSetBackgroundImage,
+  onApplyPreset,
 }: StylePanelProps) => {
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
 
@@ -79,6 +88,66 @@ const StylePanel = ({
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === "style" && (
           <div className="space-y-6">
+            {/* Style Presets Section */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                Style Presets
+              </label>
+              <div className="space-y-4">
+                {getAllCategories().map((category) => {
+                  const presets = getPresetsByCategory(category);
+                  if (presets.length === 0) return null;
+                  return (
+                    <div key={category}>
+                      <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">
+                        {getCategoryLabel(category)}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {presets.map((preset) => (
+                          <button
+                            key={preset.id}
+                            onClick={() => onApplyPreset(preset.id)}
+                            className="group relative p-3 rounded-xl border border-slate-700 bg-slate-800/50
+                                       hover:border-primary-500/50 hover:bg-slate-800 transition-all cursor-pointer text-left"
+                          >
+                            {/* Preview gradient */}
+                            <div
+                              className="w-full h-12 rounded-lg mb-2 flex items-center justify-center overflow-hidden"
+                              style={{
+                                background:
+                                  preset.previewGradient ||
+                                  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              }}
+                            >
+                              <span
+                                className="text-xs font-medium px-1 text-center leading-tight"
+                                style={{
+                                  fontFamily: preset.fontFamily,
+                                  color: preset.textColor,
+                                  textShadow: preset.shadow
+                                    ? `${preset.shadow.offsetX}px ${preset.shadow.offsetY}px ${preset.shadow.blur}px ${preset.shadow.color}`
+                                    : "none",
+                                }}
+                              >
+                                Aa
+                              </span>
+                            </div>
+                            <p className="text-xs font-medium text-slate-200 truncate">
+                              {preset.name}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-slate-700 pt-4">
+              <p className="text-xs text-slate-400 mb-3">Chỉnh sửa thủ công</p>
+            </div>
+
             {/* Font family */}
             <div>
               <label

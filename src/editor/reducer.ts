@@ -4,6 +4,7 @@ import {
   createTextLayer,
   EditorHistoryItem,
 } from "./types";
+import { getPresetById, getLayoutYPosition } from "./stylePresets";
 
 // Save current state to history
 const saveToHistory = (state: EditorState): EditorHistoryItem => ({
@@ -273,6 +274,44 @@ export function editorReducer(
 
     case "SET_RIGHT_TAB":
       return { ...state, activeRightTab: action.payload };
+
+    case "APPLY_STYLE_PRESET": {
+      const preset = getPresetById(action.payload);
+      if (!preset) return state;
+
+      const newHistory = [
+        ...state.history.slice(0, state.historyIndex + 1),
+        saveToHistory(state),
+      ];
+
+      // Update all layers with the preset style
+      const updatedLayers = state.layers.map((layer, index) => {
+        // Determine if this is an author layer (usually the second layer or smaller font)
+        const isAuthor = index > 0 || layer.fontSize < state.fontSize;
+
+        return {
+          ...layer,
+          y: getLayoutYPosition(preset.layout, isAuthor),
+          fontFamily: preset.fontFamily,
+          fontSize: isAuthor ? preset.fontSize * 0.6 : preset.fontSize,
+          color:
+            isAuthor && preset.authorColor
+              ? preset.authorColor
+              : preset.textColor,
+        };
+      });
+
+      return {
+        ...state,
+        layers: updatedLayers,
+        fontFamily: preset.fontFamily,
+        fontSize: preset.fontSize,
+        textColor: preset.textColor,
+        boxOpacity: preset.overlayOpacity ?? state.boxOpacity,
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+      };
+    }
 
     default:
       return state;
