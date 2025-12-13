@@ -9,7 +9,7 @@
  * - Success state with download button
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimationType, getAnimationState } from "./animation";
 
 // Export options
@@ -48,6 +48,13 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [browserWarning, setBrowserWarning] = useState("");
   const [isCancelled, setIsCancelled] = useState(false);
+
+  // Refs for resource cleanup and concurrent export prevention
+  const isExportingRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const videoBlobUrlRef = useRef<string | null>(null);
 
   // Browser compatibility detection
   const checkBrowserSupport = useCallback(() => {
@@ -135,15 +142,72 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       : { width: 1280, height: 720 };
   };
 
-  // Cancel export
+  // Cleanup resources
+  const cleanupResources = useCallback(() => {
+    // Stop animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    // Stop media recorder
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.warn("[VideoExport] Error stopping recorder:", e);
+      }
+      mediaRecorderRef.current = null;
+    }
+
+    // Stop stream tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    // Revoke blob URL
+    if (videoBlobUrlRef.current) {
+      URL.revokeObjectURL(videoBlobUrlRef.current);
+      videoBlobUrlRef.current = null;
+    }
+
+    isExportingRef.current = false;
+  }, []);
+
+  // Cleanup on unmount or modal close
+  useEffect(() => {
+    return () => {
+      cleanupResources();
+    };
+  }, [cleanupResources]);
+
+  // Cleanup when modal closes during export
+  useEffect(() => {
+    if (!isOpen && isExportingRef.current) {
+      cleanupResources();
+    }
+  }, [isOpen, cleanupResources]);
+
+  // Cancel export with proper cleanup
   const handleCancel = useCallback(() => {
     setIsCancelled(true);
+    cleanupResources();
     setExportState("options");
     setProgress(0);
-  }, []);
+  }, [cleanupResources]);
 
   // Client-side video export using Canvas + MediaRecorder
   const handleExport = useCallback(async () => {
+    // Prevent concurrent exports
+    if (isExportingRef.current) {
+      console.warn("[VideoExport] Export already in progress");
+      return;
+    }
+
     // Pre-flight checks
     const { supported, error } = checkBrowserSupport();
     if (!supported) {
@@ -161,6 +225,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       return;
     }
 
+    isExportingRef.current = true;
     setExportState("exporting");
     setProgress(0);
     setIsCancelled(false);
@@ -218,6 +283,10 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         videoBitsPerSecond: options.quality === "1080p" ? 8000000 : 4000000,
       });
 
+      // Store refs for cleanup
+      streamRef.current = stream;
+      mediaRecorderRef.current = mediaRecorder;
+
       const chunks: Blob[] = [];
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -266,7 +335,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         setProgress(30 + Math.floor((frameCount / totalFrames) * 60));
 
         if (elapsed < durationMs) {
-          requestAnimationFrame(drawFrame);
+          animationFrameRef.current = requestAnimationFrame(drawFrame);
         } else {
           // Stop recording exactly when duration ends
           mediaRecorder.stop();
@@ -274,12 +343,17 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       };
 
       // Start drawing
-      requestAnimationFrame(drawFrame);
+      animationFrameRef.current = requestAnimationFrame(drawFrame);
 
       // Wait for recording to complete and auto-download
       await new Promise<void>((resolve) => {
         mediaRecorder.onstop = () => {
           setProgress(95);
+
+          // Stop stream tracks to release resources
+          stream.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+          mediaRecorderRef.current = null;
 
           // Determine file extension based on MIME type
           const extension = selectedMimeType.includes("mp4") ? "mp4" : "webm";
@@ -299,6 +373,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
           URL.revokeObjectURL(url);
 
           setProgress(100);
+          isExportingRef.current = false;
           console.log("[VideoExport] Video exported:", {
             size: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
             duration: `${options.duration}s`,
@@ -313,6 +388,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       onExportComplete?.();
     } catch (error) {
       console.error("[VideoExport] Error:", error);
+      cleanupResources();
       setErrorMessage(
         error instanceof Error ? error.message : "Unknown error occurred"
       );
