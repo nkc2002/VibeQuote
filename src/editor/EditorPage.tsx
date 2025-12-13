@@ -240,6 +240,7 @@ const EditorPage = () => {
             <StylePanel
               activeTab={state.activeRightTab}
               activePresetId={state.activePresetId}
+              textAnimation={state.textAnimation}
               fontFamily={state.fontFamily}
               fontSize={state.fontSize}
               textColor={state.textColor}
@@ -269,6 +270,9 @@ const EditorPage = () => {
               }
               onApplyPreset={(presetId) =>
                 dispatch({ type: "APPLY_STYLE_PRESET", payload: presetId })
+              }
+              onSetTextAnimation={(animation) =>
+                dispatch({ type: "SET_TEXT_ANIMATION", payload: animation })
               }
             />
           </div>

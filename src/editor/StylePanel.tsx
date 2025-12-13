@@ -7,10 +7,40 @@ import {
   getCategoryLabel,
   getPresetsByCategory,
 } from "./stylePresets";
+import { AnimationType } from "./animation";
+
+// Animation options with icons and labels
+const ANIMATION_OPTIONS: {
+  id: AnimationType;
+  name: string;
+  icon: string;
+  description: string;
+}[] = [
+  { id: "none", name: "Không", icon: "○", description: "Tắt animation" },
+  { id: "fadeIn", name: "Fade In", icon: "◐", description: "Hiện dần" },
+  { id: "fadeOut", name: "Fade Out", icon: "◑", description: "Mờ dần" },
+  { id: "slideUp", name: "Slide Up", icon: "↑", description: "Trượt lên" },
+  {
+    id: "slideDown",
+    name: "Slide Down",
+    icon: "↓",
+    description: "Trượt xuống",
+  },
+  { id: "slideLeft", name: "Slide Left", icon: "←", description: "Trượt trái" },
+  {
+    id: "slideRight",
+    name: "Slide Right",
+    icon: "→",
+    description: "Trượt phải",
+  },
+  { id: "scaleUp", name: "Scale Up", icon: "◎", description: "Phóng to" },
+  { id: "typewriter", name: "Typewriter", icon: "▌", description: "Gõ chữ" },
+];
 
 interface StylePanelProps {
   activeTab: "style" | "image";
   activePresetId: string | null;
+  textAnimation: string;
   fontFamily: string;
   fontSize: number;
   textColor: string;
@@ -27,6 +57,7 @@ interface StylePanelProps {
     image: string | { url: string; id: string | null }
   ) => void;
   onApplyPreset: (presetId: string) => void;
+  onSetTextAnimation: (animation: string) => void;
 }
 
 // Check icon SVG
@@ -45,6 +76,7 @@ const CheckIcon = () => (
 const StylePanel = ({
   activeTab,
   activePresetId,
+  textAnimation,
   fontFamily,
   fontSize,
   textColor,
@@ -59,6 +91,7 @@ const StylePanel = ({
   onSetBackgroundGradient,
   onSetBackgroundImage,
   onApplyPreset,
+  onSetTextAnimation,
 }: StylePanelProps) => {
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(
@@ -249,6 +282,70 @@ const StylePanel = ({
                         </div>
                       )}
                     </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Animation Section */}
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-primary-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Text Animation
+              </h3>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                {ANIMATION_OPTIONS.map((anim) => {
+                  const isActive = textAnimation === anim.id;
+                  return (
+                    <button
+                      key={anim.id}
+                      onClick={() => onSetTextAnimation(anim.id)}
+                      className={`relative flex flex-col items-center gap-1 p-2.5 rounded-lg transition-all duration-200 cursor-pointer
+                        ${
+                          isActive
+                            ? "bg-primary-500/20 ring-2 ring-primary-500 text-primary-300"
+                            : "bg-slate-800/50 hover:bg-slate-700/50 ring-1 ring-slate-700/50 hover:ring-slate-600 text-slate-400 hover:text-slate-300"
+                        }`}
+                      title={anim.description}
+                    >
+                      {/* Active indicator */}
+                      {isActive && (
+                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary-500 rounded-full" />
+                      )}
+
+                      {/* Icon */}
+                      <span
+                        className={`text-lg leading-none ${
+                          isActive ? "text-primary-400" : "text-slate-500"
+                        }`}
+                      >
+                        {anim.icon}
+                      </span>
+
+                      {/* Name */}
+                      <span className="text-[10px] font-medium leading-tight text-center">
+                        {anim.name}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
