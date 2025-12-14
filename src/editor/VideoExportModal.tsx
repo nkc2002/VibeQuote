@@ -9,8 +9,15 @@
  * - Success state with download button
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { AnimationType, getAnimationState } from "./animation";
+import { useState, useEffect, useCallback, useRef, RefObject } from "react";
+import {
+  AnimationType,
+  getAnimationState,
+  getAnimationDuration,
+} from "./animation";
+import { ParticleType } from "./particles";
+import { TextLayer } from "./types";
+import { CanvasRef } from "./Canvas";
 
 // Export options
 export interface VideoExportOptions {
@@ -28,6 +35,16 @@ interface VideoExportModalProps {
   onClose: () => void;
   captureCanvas: () => Promise<string>; // Returns base64 data URL
   onExportComplete?: () => void;
+  // New props for Preview-accurate export
+  layers: TextLayer[];
+  backgroundImage: string | null;
+  backgroundGradient: string;
+  textAnimation: AnimationType;
+  particleEffect: ParticleType;
+  musicEnabled: boolean;
+  musicTrackId: string | null;
+  musicVolume: number;
+  canvasRef: RefObject<CanvasRef | null>;
 }
 
 const VideoExportModal: React.FC<VideoExportModalProps> = ({
@@ -35,13 +52,22 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
   onClose,
   captureCanvas,
   onExportComplete,
+  layers,
+  backgroundImage,
+  backgroundGradient,
+  textAnimation,
+  particleEffect: _particleEffect,
+  musicEnabled: _musicEnabled,
+  musicTrackId: _musicTrackId,
+  musicVolume: _musicVolume,
+  canvasRef: _canvasRef,
 }) => {
   const [exportState, setExportState] = useState<ExportState>("options");
   const [options, setOptions] = useState<VideoExportOptions>({
     duration: 5,
     quality: "1080p",
     backgroundAnimation: "fadeIn",
-    textAnimation: "fadeIn",
+    textAnimation: textAnimation || "fadeIn",
   });
   const [progress, setProgress] = useState(0);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
@@ -298,20 +324,40 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       const durationMs = options.duration * 1000;
       const totalFrames = Math.floor(options.duration * FPS);
 
+      // Calculate text animation duration (same as Preview)
+      const textAnimDurationPercent = getAnimationDuration(
+        options.textAnimation
+      );
+      const textAnimDurationMs = textAnimDurationPercent * durationMs;
+
       mediaRecorder.start(100); // Request data every 100ms
 
-      // Animation loop using time-based animations
+      // Animation loop using time-based animations (same as usePreview)
       const startTime = performance.now();
       let frameCount = 0;
+
+      // Scale factor for layers (source canvas to export canvas)
+      const scaleX = width / 1920;
+      const scaleY = height / 1080;
 
       const drawFrame = (timestamp: number) => {
         const elapsed = timestamp - startTime;
         const timeProgress = Math.min(elapsed / durationMs, 1);
 
+        // Calculate text animation progress (same as Preview)
+        let textAnimProgress = 1;
+        if (textAnimDurationMs > 0 && elapsed < textAnimDurationMs) {
+          textAnimProgress = elapsed / textAnimDurationMs;
+        }
+
         // Get animation states from our animation system
         const bgState = getAnimationState(
           options.backgroundAnimation,
           timeProgress
+        );
+        const textState = getAnimationState(
+          options.textAnimation,
+          textAnimProgress
         );
 
         // Clear canvas
@@ -329,6 +375,85 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         ctx.translate(-width / 2, -height / 2);
         ctx.drawImage(img, -offsetX / scale, -offsetY / scale, width, height);
         ctx.restore();
+
+        // Render text layers with animation (same as Canvas.tsx)
+        for (const layer of layers) {
+          ctx.save();
+
+          // Get animation transforms
+          const animOpacity = textState.opacity ?? 1;
+          const animScale = textState.scale ?? 1;
+          const animTranslateY = (textState.translateY ?? 0) * scaleY;
+          const animBlur = textState.blur ?? 0;
+
+          // Calculate layer position and size
+          const layerX = layer.position.x * scaleX;
+          const layerY = layer.position.y * scaleY;
+          const layerWidth = layer.size.width * scaleX;
+          const layerHeight = layer.size.height * scaleY;
+          const layerCenterX = layerX + layerWidth / 2;
+          const layerCenterY = layerY + layerHeight / 2;
+
+          // Apply animation transforms
+          ctx.globalAlpha = animOpacity;
+          ctx.translate(layerCenterX, layerCenterY + animTranslateY);
+          ctx.scale(animScale, animScale);
+          ctx.translate(-layerCenterX, -layerCenterY);
+
+          // Apply blur if needed
+          if (animBlur > 0) {
+            ctx.filter = `blur(${animBlur}px)`;
+          }
+
+          // Draw text box background if opacity > 0
+          if (layer.boxOpacity > 0) {
+            ctx.fillStyle = `rgba(0, 0, 0, ${layer.boxOpacity})`;
+            const boxPadding = 16 * scaleY;
+            ctx.fillRect(
+              layerX - boxPadding,
+              layerY - boxPadding,
+              layerWidth + boxPadding * 2,
+              layerHeight + boxPadding * 2
+            );
+          }
+
+          // Draw text
+          const fontSize = layer.fontSize * scaleY;
+          ctx.font = `${layer.fontStyle || "normal"} ${
+            layer.fontWeight || "normal"
+          } ${fontSize}px ${layer.fontFamily}`;
+          ctx.fillStyle = layer.textColor;
+          ctx.textAlign = (layer.textAlign || "center") as CanvasTextAlign;
+          ctx.textBaseline = "top";
+
+          // Handle shadow
+          if (layer.shadowBlur > 0) {
+            ctx.shadowColor = layer.shadowColor || "rgba(0,0,0,0.5)";
+            ctx.shadowBlur = layer.shadowBlur * scaleY;
+            ctx.shadowOffsetX = (layer.shadowX || 0) * scaleX;
+            ctx.shadowOffsetY = (layer.shadowY || 0) * scaleY;
+          }
+
+          // Calculate text X position based on alignment
+          let textX = layerX;
+          if (layer.textAlign === "center") {
+            textX = layerX + layerWidth / 2;
+          } else if (layer.textAlign === "right") {
+            textX = layerX + layerWidth;
+          }
+
+          // Draw text with word wrap
+          const lines = layer.content.split("\n");
+          const lineHeight = fontSize * (layer.lineHeight || 1.5);
+          let textY = layerY;
+
+          for (const line of lines) {
+            ctx.fillText(line, textX, textY);
+            textY += lineHeight;
+          }
+
+          ctx.restore();
+        }
 
         // Update progress
         frameCount++;

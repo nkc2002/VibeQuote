@@ -422,6 +422,19 @@ const EditorPage = () => {
         onClose={() => setIsExportModalOpen(false)}
         captureCanvas={captureCanvas}
         onExportComplete={handleExportComplete}
+        layers={state.layers}
+        backgroundImage={state.backgroundImage}
+        backgroundGradient={state.backgroundGradient}
+        textAnimation={
+          state.textAnimation as import("./animation").AnimationType
+        }
+        particleEffect={
+          state.particleEffect as import("./particles").ParticleType
+        }
+        musicEnabled={state.musicEnabled}
+        musicTrackId={state.selectedMusicId}
+        musicVolume={state.musicVolume}
+        canvasRef={canvasComponentRef}
       />
     </div>
   );
