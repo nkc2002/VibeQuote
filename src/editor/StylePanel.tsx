@@ -8,6 +8,15 @@ import {
 } from "./stylePresets";
 import { AnimationType } from "./animation";
 import { MUSIC_TRACKS, formatDuration } from "./music";
+import { ParticleType, getParticleTypeLabel } from "./particles";
+
+// Particle effect options
+const PARTICLE_OPTIONS: { id: ParticleType; name: string; icon: string }[] = [
+  { id: "none", name: "Không", icon: "○" },
+  { id: "snow", name: "Tuyết", icon: "❄" },
+  { id: "dust", name: "Bụi", icon: "✦" },
+  { id: "sparkles", name: "Lấp lánh", icon: "✨" },
+];
 
 // Animation options with icons and labels
 const ANIMATION_OPTIONS: {
@@ -41,6 +50,8 @@ interface StylePanelProps {
   activeTab: "style" | "image";
   activePresetId: string | null;
   textAnimation: string;
+  // Particle effect
+  particleEffect: ParticleType;
   // Music props
   selectedMusicId: string | null;
   musicVolume: number;
@@ -64,6 +75,7 @@ interface StylePanelProps {
   ) => void;
   onApplyPreset: (presetId: string) => void;
   onSetTextAnimation: (animation: string) => void;
+  onSetParticleEffect: (effect: ParticleType) => void;
   // Music callbacks
   onSetMusicTrack: (trackId: string | null) => void;
   onSetMusicVolume: (volume: number) => void;
@@ -88,6 +100,7 @@ const StylePanel = ({
   activeTab,
   activePresetId,
   textAnimation,
+  particleEffect,
   selectedMusicId,
   musicVolume,
   musicEnabled,
@@ -107,6 +120,7 @@ const StylePanel = ({
   onSetBackgroundImage,
   onApplyPreset,
   onSetTextAnimation,
+  onSetParticleEffect,
   onSetMusicTrack,
   onSetMusicVolume,
   onToggleMusicEnabled,
@@ -363,6 +377,54 @@ const StylePanel = ({
                       {/* Name */}
                       <span className="text-[10px] font-medium leading-tight text-center">
                         {anim.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Particle Effects Section */}
+            <div className="p-4">
+              <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-primary-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  />
+                </svg>
+                Effects
+              </h3>
+              <div className="grid grid-cols-4 gap-1.5">
+                {PARTICLE_OPTIONS.map((effect) => {
+                  const isActive = particleEffect === effect.id;
+                  return (
+                    <button
+                      key={effect.id}
+                      onClick={() => onSetParticleEffect(effect.id)}
+                      className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all cursor-pointer
+                        ${
+                          isActive
+                            ? "bg-primary-500/20 ring-2 ring-primary-500 text-primary-300"
+                            : "bg-slate-800/50 hover:bg-slate-700/50 ring-1 ring-slate-700/50 hover:ring-slate-600 text-slate-400"
+                        }`}
+                    >
+                      <span
+                        className={`text-base ${
+                          isActive ? "text-primary-400" : "text-slate-500"
+                        }`}
+                      >
+                        {effect.icon}
+                      </span>
+                      <span className="text-[9px] font-medium">
+                        {effect.name}
                       </span>
                     </button>
                   );

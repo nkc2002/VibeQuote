@@ -7,11 +7,20 @@ import Canvas, { CanvasRef } from "./Canvas";
 import StylePanel from "./StylePanel";
 import VideoExportModal from "./VideoExportModal";
 import { videosApi } from "../api";
+import { useAudioPlayer } from "./useAudioPlayer";
 
 const EditorPage = () => {
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
   const canvasComponentRef = useRef<CanvasRef>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // Audio player hook for music preview
+  useAudioPlayer({
+    trackId: state.selectedMusicId,
+    volume: state.musicVolume,
+    enabled: state.musicEnabled,
+    isPlaying: state.isMusicPlaying,
+  });
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -241,6 +250,7 @@ const EditorPage = () => {
               activeTab={state.activeRightTab}
               activePresetId={state.activePresetId}
               textAnimation={state.textAnimation}
+              particleEffect={state.particleEffect}
               selectedMusicId={state.selectedMusicId}
               musicVolume={state.musicVolume}
               musicEnabled={state.musicEnabled}
@@ -277,6 +287,9 @@ const EditorPage = () => {
               }
               onSetTextAnimation={(animation) =>
                 dispatch({ type: "SET_TEXT_ANIMATION", payload: animation })
+              }
+              onSetParticleEffect={(effect) =>
+                dispatch({ type: "SET_PARTICLE_EFFECT", payload: effect })
               }
               onSetMusicTrack={(trackId) =>
                 dispatch({ type: "SET_MUSIC_TRACK", payload: trackId })
