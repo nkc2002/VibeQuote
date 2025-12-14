@@ -8,6 +8,7 @@ import StylePanel from "./StylePanel";
 import VideoExportModal from "./VideoExportModal";
 import { videosApi } from "../api";
 import { usePreview } from "./usePreview";
+import { useAudioPlayer } from "./useAudioPlayer";
 import { AnimationType } from "./animation";
 import { ParticleType } from "./particles";
 
@@ -16,8 +17,8 @@ const EditorPage = () => {
   const canvasComponentRef = useRef<CanvasRef>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // Video duration in seconds (default 6 seconds)
-  const videoDuration = 6;
+  // Video/Preview duration in seconds
+  const videoDuration = 15;
 
   // Unified Preview hook - handles animation, effects, and music
   const { isPreviewRunning, startPreview, stopPreview } = usePreview({
@@ -37,6 +38,23 @@ const EditorPage = () => {
         }
       },
       [state.isMusicPlaying]
+    ),
+  });
+
+  // Independent music playback for StylePanel (when NOT in preview)
+  // This allows users to preview tracks by clicking play in the track list
+  useAudioPlayer({
+    trackId: !isPreviewRunning ? state.selectedMusicId : null,
+    volume: state.musicVolume,
+    enabled: state.musicEnabled && !isPreviewRunning,
+    isPlaying: state.isMusicPlaying && !isPreviewRunning,
+    onPlayStateChange: useCallback(
+      (playing: boolean) => {
+        if (!playing && state.isMusicPlaying && !isPreviewRunning) {
+          dispatch({ type: "TOGGLE_MUSIC_PLAYING" });
+        }
+      },
+      [state.isMusicPlaying, isPreviewRunning]
     ),
   });
 
@@ -243,8 +261,8 @@ const EditorPage = () => {
               backgroundImage={state.backgroundImage}
               backgroundGradient={state.backgroundGradient}
               boxOpacity={state.boxOpacity}
-              selectedLayerId={state.selectedLayerId}
-              isPreviewMode={state.isPreviewMode}
+              selectedLayerId={isPreviewRunning ? null : state.selectedLayerId}
+              isPreviewMode={isPreviewRunning || state.isPreviewMode}
               textAnimation={
                 state.textAnimation as import("./animation").AnimationType
               }
