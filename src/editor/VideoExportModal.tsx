@@ -497,7 +497,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
     const url = URL.createObjectURL(videoBlob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `vibequote-${Date.now()}.webm`;
+    a.download = `vibequote-${Date.now()}.mp4`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
