@@ -5,8 +5,10 @@ import {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  useMemo,
 } from "react";
 import { TextLayer } from "./types";
+import { AnimationType, getAnimationState } from "./animation";
 
 // Resize handle types
 type HandleType = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
@@ -18,6 +20,9 @@ interface CanvasProps {
   boxOpacity: number;
   selectedLayerId: string | null;
   isPreviewMode: boolean;
+  // Animation props
+  textAnimation?: AnimationType;
+  animationProgress?: number;
   onSelectLayer: (id: string | null) => void;
   onMoveLayer: (id: string, x: number, y: number) => void;
   onResizeLayer?: (
@@ -42,6 +47,8 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       boxOpacity,
       selectedLayerId,
       isPreviewMode,
+      textAnimation = "none",
+      animationProgress = 1,
       onSelectLayer,
       onMoveLayer,
       onResizeLayer,
@@ -69,6 +76,11 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       canvasWidth: number;
       canvasHeight: number;
     } | null>(null);
+
+    // Compute animation state
+    const animState = useMemo(() => {
+      return getAnimationState(textAnimation, animationProgress);
+    }, [textAnimation, animationProgress]);
 
     // Expose captureAsDataURL method to parent via ref
     useImperativeHandle(ref, () => ({
@@ -499,122 +511,138 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         )}
 
         {/* Text layers */}
-        {layers.map((layer) => (
-          <div
-            key={layer.id}
-            className={`absolute select-none transition-shadow duration-200 ${
-              !isPreviewMode ? "cursor-move" : "cursor-default"
-            } ${
-              layer.isSelected && !isPreviewMode
-                ? "ring-2 ring-primary-500 ring-offset-2 ring-offset-transparent"
-                : ""
-            }`}
-            style={{
-              left: `${layer.x}%`,
-              top: `${layer.y}%`,
-              transform: "translate(-50%, -50%)",
-              fontFamily: layer.fontFamily,
-              fontSize: `${layer.fontSize}px`,
-              color: layer.color,
-              opacity: layer.opacity,
-              textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-              maxWidth: "80%",
-              textAlign: "center",
-              lineHeight: 1.4,
-              zIndex: layer.isSelected ? 10 : 1,
-              width: layer.width > 0 ? layer.width : "auto",
-              wordWrap: "break-word",
-              overflowWrap: "break-word",
-            }}
-            onMouseDown={(e) => handleMouseDown(e, layer.id)}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isPreviewMode) onSelectLayer(layer.id);
-            }}
-            role="button"
-            tabIndex={isPreviewMode ? -1 : 0}
-            aria-label={`Text layer: ${layer.text}`}
-            aria-selected={layer.isSelected}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onSelectLayer(layer.id);
-              }
-            }}
-          >
-            {layer.text}
+        {layers.map((layer) => {
+          // Compute animation transform
+          const animTranslateX = animState.translateX || 0;
+          const animTranslateY = animState.translateY || 0;
+          const animScale = animState.scale ?? 1;
+          const animOpacity = animState.opacity ?? 1;
 
-            {/* Resize handles */}
-            {layer.isSelected && !isPreviewMode && onResizeLayer && (
-              <>
-                <div
-                  data-resize="se"
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                  style={{ bottom: -6, right: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "se")}
-                />
-                <div
-                  data-resize="sw"
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                  style={{ bottom: -6, left: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "sw")}
-                />
-                <div
-                  data-resize="ne"
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                  style={{ top: -6, right: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "ne")}
-                />
-                <div
-                  data-resize="nw"
-                  className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
-                  style={{ top: -6, left: -6 }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "nw")}
-                />
-                <div
-                  data-resize="n"
-                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                  style={{
-                    top: -6,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                  }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "n")}
-                />
-                <div
-                  data-resize="s"
-                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                  style={{
-                    bottom: -6,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                  }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "s")}
-                />
-                <div
-                  data-resize="w"
-                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                  style={{
-                    left: -6,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "w")}
-                />
-                <div
-                  data-resize="e"
-                  className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
-                  style={{
-                    right: -6,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                  }}
-                  onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "e")}
-                />
-              </>
-            )}
-          </div>
-        ))}
+          return (
+            <div
+              key={layer.id}
+              className={`absolute select-none transition-shadow duration-200 ${
+                !isPreviewMode ? "cursor-move" : "cursor-default"
+              } ${
+                layer.isSelected && !isPreviewMode
+                  ? "ring-2 ring-primary-500 ring-offset-2 ring-offset-transparent"
+                  : ""
+              }`}
+              style={{
+                left: `${layer.x}%`,
+                top: `${layer.y}%`,
+                transform: `translate(-50%, -50%) translate(${animTranslateX}px, ${animTranslateY}px) scale(${animScale})`,
+                fontFamily: layer.fontFamily,
+                fontSize: `${layer.fontSize}px`,
+                color: layer.color,
+                opacity: layer.opacity * animOpacity,
+                textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                maxWidth: "80%",
+                textAlign: "center",
+                lineHeight: 1.4,
+                zIndex: layer.isSelected ? 10 : 1,
+                width: layer.width > 0 ? layer.width : "auto",
+                wordWrap: "break-word",
+                overflowWrap: "break-word",
+              }}
+              onMouseDown={(e) => handleMouseDown(e, layer.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isPreviewMode) onSelectLayer(layer.id);
+              }}
+              role="button"
+              tabIndex={isPreviewMode ? -1 : 0}
+              aria-label={`Text layer: ${layer.text}`}
+              aria-selected={layer.isSelected}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectLayer(layer.id);
+                }
+              }}
+            >
+              {layer.text}
+
+              {/* Resize handles */}
+              {layer.isSelected && !isPreviewMode && onResizeLayer && (
+                <>
+                  <div
+                    data-resize="se"
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-se-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ bottom: -6, right: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "se")
+                    }
+                  />
+                  <div
+                    data-resize="sw"
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-sw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ bottom: -6, left: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "sw")
+                    }
+                  />
+                  <div
+                    data-resize="ne"
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-ne-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ top: -6, right: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "ne")
+                    }
+                  />
+                  <div
+                    data-resize="nw"
+                    className="absolute w-3 h-3 bg-white border-2 border-primary-500 rounded-full cursor-nw-resize hover:bg-primary-100 hover:scale-125 transition-all z-50"
+                    style={{ top: -6, left: -6 }}
+                    onMouseDown={(e) =>
+                      handleResizeMouseDown(e, layer.id, "nw")
+                    }
+                  />
+                  <div
+                    data-resize="n"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-n-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                    style={{
+                      top: -6,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "n")}
+                  />
+                  <div
+                    data-resize="s"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-s-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                    style={{
+                      bottom: -6,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "s")}
+                  />
+                  <div
+                    data-resize="w"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-w-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                    style={{
+                      left: -6,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "w")}
+                  />
+                  <div
+                    data-resize="e"
+                    className="absolute w-3 h-3 bg-white border-2 border-secondary-500 rounded-full cursor-e-resize hover:bg-secondary-100 hover:scale-125 transition-all z-50"
+                    style={{
+                      right: -6,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                    }}
+                    onMouseDown={(e) => handleResizeMouseDown(e, layer.id, "e")}
+                  />
+                </>
+              )}
+            </div>
+          );
+        })}
 
         {/* Empty state */}
         {layers.length === 0 && !isPreviewMode && (

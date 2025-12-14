@@ -216,6 +216,10 @@ const EditorPage = () => {
               boxOpacity={state.boxOpacity}
               selectedLayerId={state.selectedLayerId}
               isPreviewMode={state.isPreviewMode}
+              textAnimation={
+                state.textAnimation as import("./animation").AnimationType
+              }
+              animationProgress={state.animationProgress}
               onSelectLayer={handleSelectLayer}
               onMoveLayer={handleMoveLayer}
               onResizeLayer={handleResizeLayer}
