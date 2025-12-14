@@ -9,6 +9,7 @@ import {
 } from "react";
 import { TextLayer } from "./types";
 import { AnimationType, getAnimationState } from "./animation";
+import { ParticleSystem, ParticleType } from "./particles";
 
 // Resize handle types
 type HandleType = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
@@ -23,6 +24,8 @@ interface CanvasProps {
   // Animation props
   textAnimation?: AnimationType;
   animationProgress?: number;
+  // Particle effect prop
+  particleEffect?: ParticleType;
   onSelectLayer: (id: string | null) => void;
   onMoveLayer: (id: string, x: number, y: number) => void;
   onResizeLayer?: (
@@ -49,6 +52,7 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       isPreviewMode,
       textAnimation = "none",
       animationProgress = 1,
+      particleEffect = "none",
       onSelectLayer,
       onMoveLayer,
       onResizeLayer,
@@ -56,6 +60,8 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
     ref
   ) => {
     const canvasRef = useRef<HTMLDivElement>(null);
+    const particleCanvasRef = useRef<HTMLCanvasElement>(null);
+    const particleSystemRef = useRef<ParticleSystem | null>(null);
     const [dragging, setDragging] = useState<string | null>(null);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [showSnapLines, setShowSnapLines] = useState({
@@ -81,6 +87,48 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
     const animState = useMemo(() => {
       return getAnimationState(textAnimation, animationProgress);
     }, [textAnimation, animationProgress]);
+
+    // Initialize ParticleSystem
+    useEffect(() => {
+      if (particleCanvasRef.current && !particleSystemRef.current) {
+        particleSystemRef.current = new ParticleSystem(
+          particleCanvasRef.current
+        );
+      }
+
+      return () => {
+        if (particleSystemRef.current) {
+          particleSystemRef.current.destroy();
+          particleSystemRef.current = null;
+        }
+      };
+    }, []);
+
+    // Update particle effect when type changes
+    useEffect(() => {
+      if (particleSystemRef.current) {
+        particleSystemRef.current.setEffect(particleEffect);
+      }
+    }, [particleEffect]);
+
+    // Update particle canvas size when container resizes
+    useEffect(() => {
+      const updateParticleCanvasSize = () => {
+        if (canvasRef.current && particleSystemRef.current) {
+          const rect = canvasRef.current.getBoundingClientRect();
+          particleSystemRef.current.setSize(rect.width, rect.height);
+        }
+      };
+
+      updateParticleCanvasSize();
+
+      const resizeObserver = new ResizeObserver(updateParticleCanvasSize);
+      if (canvasRef.current) {
+        resizeObserver.observe(canvasRef.current);
+      }
+
+      return () => resizeObserver.disconnect();
+    }, []);
 
     // Expose captureAsDataURL method to parent via ref
     useImperativeHandle(ref, () => ({
@@ -509,6 +557,13 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
             aria-hidden="true"
           />
         )}
+
+        {/* Particle Effect Overlay Canvas */}
+        <canvas
+          ref={particleCanvasRef}
+          className="absolute inset-0 w-full h-full pointer-events-none z-5"
+          aria-hidden="true"
+        />
 
         {/* Text layers */}
         {layers.map((layer) => {

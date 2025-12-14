@@ -248,6 +248,9 @@ const EditorPage = () => {
                 state.textAnimation as import("./animation").AnimationType
               }
               animationProgress={state.animationProgress}
+              particleEffect={
+                state.particleEffect as import("./particles").ParticleType
+              }
               onSelectLayer={handleSelectLayer}
               onMoveLayer={handleMoveLayer}
               onResizeLayer={handleResizeLayer}
