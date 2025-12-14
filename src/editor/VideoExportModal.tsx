@@ -393,11 +393,16 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
           const animTranslateY = (textState.translateY ?? 0) * scaleY;
           const animBlur = textState.blur ?? 0;
 
-          // Calculate layer position and size (use correct property names)
-          const layerX = layer.x * scaleX;
-          const layerY = layer.y * scaleY;
+          // Calculate layer position (x/y are percentages 0-100)
+          // Convert percentage to pixels in export canvas
+          const layerX = (layer.x / 100) * width;
+          const layerY = (layer.y / 100) * height;
+
+          // Width/height are in pixels relative to 1080x1920 canvas
+          // Scale them to export resolution
           const layerWidth = layer.width * scaleX;
           const layerHeight = layer.height * scaleY;
+
           const layerCenterX = layerX + layerWidth / 2;
           const layerCenterY = layerY + layerHeight / 2;
 
@@ -419,8 +424,8 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
           ctx.textAlign = "center" as CanvasTextAlign;
           ctx.textBaseline = "top";
 
-          // Calculate text X position (centered)
-          const textX = layerX + layerWidth / 2;
+          // Calculate text X position (centered within layer)
+          const textX = layerCenterX;
 
           // Draw text with word wrap
           const lines = layer.text.split("\n");
