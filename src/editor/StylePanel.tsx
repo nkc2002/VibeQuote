@@ -475,14 +475,14 @@ const StylePanel = ({
                 {/* Enable/Disable Toggle */}
                 <button
                   onClick={onToggleMusicEnabled}
-                  className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${
-                    musicEnabled ? "bg-primary-500" : "bg-slate-700"
+                  className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer flex-shrink-0 ${
+                    musicEnabled ? "bg-primary-500" : "bg-slate-600"
                   }`}
                   aria-label={musicEnabled ? "Disable music" : "Enable music"}
                 >
                   <span
-                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                      musicEnabled ? "translate-x-5" : "translate-x-0.5"
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      musicEnabled ? "translate-x-5" : "translate-x-0"
                     }`}
                   />
                 </button>
