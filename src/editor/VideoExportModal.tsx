@@ -288,21 +288,28 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       const FPS = 30;
       const stream = canvas.captureStream(FPS); // Video-only stream (no audio)
 
-      // Detect best supported MIME type
+      // Detect best supported MIME type - prefer MP4 for better compatibility
       const mimeTypes = [
+        "video/mp4;codecs=avc1",
+        "video/mp4;codecs=h264",
+        "video/mp4",
         "video/webm;codecs=vp9",
         "video/webm;codecs=vp8",
         "video/webm",
-        "video/mp4",
       ];
-      let selectedMimeType = "video/webm";
+      let selectedMimeType = "video/webm"; // fallback
       for (const mimeType of mimeTypes) {
         if (MediaRecorder.isTypeSupported(mimeType)) {
           selectedMimeType = mimeType;
+          console.log("[VideoExport] Selected MIME type:", mimeType);
           break;
         }
       }
-      console.log("[VideoExport] Using MIME type:", selectedMimeType);
+
+      // Determine output format
+      const isMP4 = selectedMimeType.includes("mp4");
+      const fileExtension = isMP4 ? "mp4" : "webm";
+      console.log("[VideoExport] Output format:", fileExtension);
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: selectedMimeType,
