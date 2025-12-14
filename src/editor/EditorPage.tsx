@@ -7,24 +7,32 @@ import Canvas, { CanvasRef } from "./Canvas";
 import StylePanel from "./StylePanel";
 import VideoExportModal from "./VideoExportModal";
 import { videosApi } from "../api";
-import { useAudioPlayer } from "./useAudioPlayer";
-import { usePreviewAnimation } from "./useAnimationPreview";
+import { usePreview } from "./usePreview";
 import { AnimationType } from "./animation";
+import { ParticleType } from "./particles";
 
 const EditorPage = () => {
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
   const canvasComponentRef = useRef<CanvasRef>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // Audio player hook for music preview
-  const { stop: _stopMusic, reset: _resetMusic } = useAudioPlayer({
-    trackId: state.selectedMusicId,
-    volume: state.musicVolume,
-    enabled: state.musicEnabled,
-    isPlaying: state.isMusicPlaying,
-    onPlayStateChange: useCallback(
+  // Video duration in seconds (default 6 seconds)
+  const videoDuration = 6;
+
+  // Unified Preview hook - handles animation, effects, and music
+  const { isPreviewRunning, startPreview, stopPreview } = usePreview({
+    videoDuration,
+    textAnimation: state.textAnimation as AnimationType,
+    onAnimationProgress: useCallback((progress: number) => {
+      dispatch({ type: "SET_ANIMATION_PROGRESS", payload: progress });
+    }, []),
+    particleEffect: state.particleEffect as ParticleType,
+    musicEnabled: state.musicEnabled,
+    selectedMusicId: state.selectedMusicId,
+    musicVolume: state.musicVolume,
+    onMusicPlayingChange: useCallback(
       (playing: boolean) => {
-        if (!playing && state.isMusicPlaying) {
+        if (playing !== state.isMusicPlaying) {
           dispatch({ type: "TOGGLE_MUSIC_PLAYING" });
         }
       },
@@ -32,29 +40,14 @@ const EditorPage = () => {
     ),
   });
 
-  // Animation preview state
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  // Animation preview callback
-  const handlePreviewAnimationProgress = useCallback((progress: number) => {
-    dispatch({ type: "SET_ANIMATION_PROGRESS", payload: progress });
-    if (progress >= 1) {
-      setIsAnimating(false);
+  // Handle Preview button click
+  const handlePreviewToggle = useCallback(() => {
+    if (isPreviewRunning) {
+      stopPreview();
+    } else {
+      startPreview();
     }
-  }, []);
-
-  // Animation preview hook
-  const { preview: triggerPreviewAnimation } = usePreviewAnimation(
-    state.textAnimation as AnimationType,
-    handlePreviewAnimationProgress
-  );
-
-  // Start animation preview
-  const handlePreviewAnimation = useCallback(() => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    triggerPreviewAnimation();
-  }, [isAnimating, triggerPreviewAnimation]);
+  }, [isPreviewRunning, startPreview, stopPreview]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -189,11 +182,11 @@ const EditorPage = () => {
         canRedo={state.historyIndex < state.history.length - 1}
         isPreviewMode={state.isPreviewMode}
         isGenerating={state.isGenerating}
-        isAnimating={isAnimating}
+        isAnimating={isPreviewRunning}
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
         onTogglePreview={() => dispatch({ type: "TOGGLE_PREVIEW" })}
-        onPreviewAnimation={handlePreviewAnimation}
+        onPreviewAnimation={handlePreviewToggle}
         onGenerate={handleGenerate}
         onToggleLeftSidebar={() => dispatch({ type: "TOGGLE_LEFT_SIDEBAR" })}
         onToggleRightSidebar={() => dispatch({ type: "TOGGLE_RIGHT_SIDEBAR" })}
