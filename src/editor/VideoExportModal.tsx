@@ -460,22 +460,11 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
           streamRef.current = null;
           mediaRecorderRef.current = null;
 
-          // Determine file extension based on MIME type
-          const extension = selectedMimeType.includes("mp4") ? "mp4" : "webm";
+          // Create video blob
           const blob = new Blob(chunks, {
             type: selectedMimeType.split(";")[0],
           });
           setVideoBlob(blob);
-
-          // Auto-trigger download
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `vibequote-${Date.now()}.${extension}`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
 
           setProgress(100);
           isExportingRef.current = false;
