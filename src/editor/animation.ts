@@ -34,16 +34,16 @@ export interface AnimationState {
 // Animation Config
 // ============================================================
 
-// Duration as percentage of total video duration
+// Duration as percentage of total video duration (extended for better visibility)
 const ANIMATION_DURATIONS: Record<AnimationType, number> = {
   none: 0,
-  fadeIn: 0.22, // 22% of total duration
-  slideUp: 0.25, // 25% of total duration
-  fadeSlide: 0.25, // 25% of total duration
-  scaleInSoft: 0.22, // 22% of total duration
-  blurReveal: 0.27, // 27% of total duration
-  maskReveal: 0.3, // 30% of total duration
-  typewriter: 0.55, // 55% of total duration
+  fadeIn: 0.4, // 40% of total duration
+  slideUp: 0.45, // 45% of total duration
+  fadeSlide: 0.45, // 45% of total duration
+  scaleInSoft: 0.4, // 40% of total duration
+  blurReveal: 0.5, // 50% of total duration
+  maskReveal: 0.55, // 55% of total duration
+  typewriter: 0.55, // 55% of total duration (unchanged)
 };
 
 // Slide distance in pixels

@@ -24,14 +24,29 @@ const EditorPage = () => {
     isPlaying: state.isMusicPlaying,
   });
 
+  // Animation preview state
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Animation preview callback
+  const handlePreviewAnimationProgress = useCallback((progress: number) => {
+    dispatch({ type: "SET_ANIMATION_PROGRESS", payload: progress });
+    if (progress >= 1) {
+      setIsAnimating(false);
+    }
+  }, []);
+
   // Animation preview hook
-  const { preview: previewAnimation, reset: _resetAnimation } =
-    usePreviewAnimation(
-      state.textAnimation as AnimationType,
-      useCallback((progress: number) => {
-        dispatch({ type: "SET_ANIMATION_PROGRESS", payload: progress });
-      }, [])
-    );
+  const { preview: triggerPreviewAnimation } = usePreviewAnimation(
+    state.textAnimation as AnimationType,
+    handlePreviewAnimationProgress
+  );
+
+  // Start animation preview
+  const handlePreviewAnimation = useCallback(() => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    triggerPreviewAnimation();
+  }, [isAnimating, triggerPreviewAnimation]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -166,9 +181,11 @@ const EditorPage = () => {
         canRedo={state.historyIndex < state.history.length - 1}
         isPreviewMode={state.isPreviewMode}
         isGenerating={state.isGenerating}
+        isAnimating={isAnimating}
         onUndo={() => dispatch({ type: "UNDO" })}
         onRedo={() => dispatch({ type: "REDO" })}
         onTogglePreview={() => dispatch({ type: "TOGGLE_PREVIEW" })}
+        onPreviewAnimation={handlePreviewAnimation}
         onGenerate={handleGenerate}
         onToggleLeftSidebar={() => dispatch({ type: "TOGGLE_LEFT_SIDEBAR" })}
         onToggleRightSidebar={() => dispatch({ type: "TOGGLE_RIGHT_SIDEBAR" })}
@@ -239,23 +256,7 @@ const EditorPage = () => {
             {/* Canvas info */}
             <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
               <span>{state.layers.length} layer(s)</span>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={previewAnimation}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500/20 hover:bg-primary-500/30 text-primary-300 rounded-lg transition-colors cursor-pointer"
-                  title="Preview animation"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  <span>Preview</span>
-                </button>
-                <span>16:9 • 1920×1080</span>
-              </div>
+              <span>16:9 • 1920×1080</span>
             </div>
           </div>
         </main>

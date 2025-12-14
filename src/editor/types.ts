@@ -226,10 +226,10 @@ export const initialEditorState: EditorState = {
   boxOpacity: 0,
   activePresetId: null,
 
-  textAnimation: "fadeIn",
-  backgroundAnimation: "zoomIn",
+  textAnimation: "none",
+  backgroundAnimation: "none",
   isAnimationPlaying: false,
-  animationProgress: 0,
+  animationProgress: 1,
 
   selectedMusicId: null,
   musicVolume: 0.5,
