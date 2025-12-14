@@ -327,9 +327,9 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         }
       };
 
-      // Step 5: Record video frames with animation system
+      // Step 5: Record video frames
+      const durationMs = options.duration * 1000;
       const totalFrames = options.duration * FPS;
-      const frameIntervalMs = 1000 / FPS;
 
       // Calculate text animation (frames that have animation)
       const textAnimDurationPercent = getAnimationDuration(
@@ -337,44 +337,43 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       );
       const animationFrames = Math.floor(textAnimDurationPercent * totalFrames);
 
-      mediaRecorder.start(100); // Request data every 100ms
-
-      // Frame-based rendering (more reliable than requestAnimationFrame)
-      let currentFrame = 0;
-
-      // Scale factor for layers (source canvas to export canvas)
+      // Scale factor for layers
       const scaleX = width / 1920;
       const scaleY = height / 1080;
 
-      const drawFrame = () => {
-        // Calculate progress based on frames (not elapsed time)
-        const timeProgress = currentFrame / totalFrames;
+      let frameCount = 0;
+      let isRecording = true;
+      const startTime = performance.now();
 
-        // Calculate text animation progress
-        let textAnimProgress = 1;
-        if (animationFrames > 0 && currentFrame < animationFrames) {
-          textAnimProgress = currentFrame / animationFrames;
+      // Frame rendering with requestAnimationFrame
+      const renderLoop = () => {
+        if (!isRecording) return;
+
+        const elapsed = performance.now() - startTime;
+        const frameProgress = Math.min(elapsed / durationMs, 1);
+
+        // Calculate animation progress
+        let animProgress = 1;
+        if (animationFrames > 0 && frameCount < animationFrames) {
+          animProgress = frameCount / animationFrames;
         }
 
-        // Get animation states from our animation system
+        // Get animation states
         const bgState = getAnimationState(
           options.backgroundAnimation,
-          timeProgress
+          frameProgress
         );
         const textState = getAnimationState(
           options.textAnimation,
-          textAnimProgress
+          animProgress
         );
 
-        // Clear canvas
+        // Clear and draw background
         ctx.clearRect(0, 0, width, height);
-
-        // Apply background animation (zoom effect)
         ctx.save();
         const scale = bgState.scale;
         const offsetX = (width * (scale - 1)) / 2;
         const offsetY = (height * (scale - 1)) / 2;
-
         ctx.globalAlpha = bgState.opacity;
         ctx.translate(width / 2, height / 2);
         ctx.scale(scale, scale);
@@ -382,80 +381,74 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         ctx.drawImage(img, -offsetX / scale, -offsetY / scale, width, height);
         ctx.restore();
 
-        // Render text layers with animation (same as Canvas.tsx)
+        // Draw text layers with animation
         for (const layer of layers) {
           ctx.save();
 
-          // Get animation transforms
           const animOpacity = textState.opacity ?? 1;
           const animScale = textState.scale ?? 1;
           const animTranslateY = (textState.translateY ?? 0) * scaleY;
-          const animBlur = textState.blur ?? 0;
 
-          // Calculate layer position (x/y are percentages 0-100)
-          // Convert percentage to pixels in export canvas
+          // Position (x/y are percentages 0-100)
           const layerX = (layer.x / 100) * width;
           const layerY = (layer.y / 100) * height;
-
-          // Width/height are in pixels relative to 1080x1920 canvas
-          // Scale them to export resolution
           const layerWidth = layer.width * scaleX;
-          const layerHeight = layer.height * scaleY;
-
           const layerCenterX = layerX + layerWidth / 2;
-          const layerCenterY = layerY + layerHeight / 2;
+          const layerCenterY = layerY + (layer.height * scaleY) / 2;
 
-          // Apply animation transforms
+          // Apply transforms
           ctx.globalAlpha = animOpacity * layer.opacity;
           ctx.translate(layerCenterX, layerCenterY + animTranslateY);
           ctx.scale(animScale, animScale);
           ctx.translate(-layerCenterX, -layerCenterY);
 
-          // Apply blur if needed
-          if (animBlur > 0) {
-            ctx.filter = `blur(${animBlur}px)`;
-          }
-
           // Draw text
           const fontSize = layer.fontSize * scaleY;
           ctx.font = `${fontSize}px ${layer.fontFamily}`;
           ctx.fillStyle = layer.color;
-          ctx.textAlign = "center" as CanvasTextAlign;
+          ctx.textAlign = "center";
           ctx.textBaseline = "top";
 
-          // Calculate text X position (centered within layer)
-          const textX = layerCenterX;
-
-          // Draw text with word wrap
           const lines = layer.text.split("\n");
           const lineHeight = fontSize * 1.5;
           let textY = layerY;
-
           for (const line of lines) {
-            ctx.fillText(line, textX, textY);
+            ctx.fillText(line, layerCenterX, textY);
             textY += lineHeight;
           }
-
           ctx.restore();
         }
 
-        // Update progress
-        currentFrame++;
-        setProgress(30 + Math.floor((currentFrame / totalFrames) * 60));
+        frameCount++;
+        setProgress(30 + Math.floor((frameCount / totalFrames) * 60));
 
-        // Check if done using frame count
-        if (currentFrame < totalFrames) {
-          // Continue with setTimeout for reliable timing
-          setTimeout(drawFrame, frameIntervalMs);
-        } else {
-          // Stop recording when all frames are done
-          console.log("[VideoExport] Complete, frames:", currentFrame);
-          mediaRecorder.stop();
+        // Continue rendering until stopped
+        if (isRecording) {
+          requestAnimationFrame(renderLoop);
         }
       };
 
-      // Start drawing first frame
-      drawFrame();
+      // Start recording
+      mediaRecorder.start(100);
+      console.log(
+        "[VideoExport] Started recording, duration:",
+        options.duration,
+        "s"
+      );
+
+      // Start render loop
+      requestAnimationFrame(renderLoop);
+
+      // Hard stop after exact duration
+      setTimeout(() => {
+        console.log(
+          "[VideoExport] Stopping after",
+          options.duration,
+          "seconds"
+        );
+        isRecording = false;
+        mediaRecorder.stop();
+      }, durationMs);
 
       // Wait for recording to complete and auto-download
       await new Promise<void>((resolve) => {
