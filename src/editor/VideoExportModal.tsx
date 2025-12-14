@@ -53,8 +53,8 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
   captureCanvas,
   onExportComplete,
   layers,
-  backgroundImage,
-  backgroundGradient,
+  backgroundImage: _backgroundImage,
+  backgroundGradient: _backgroundGradient,
   textAnimation,
   particleEffect: _particleEffect,
   musicEnabled: _musicEnabled,
@@ -393,16 +393,16 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
           const animTranslateY = (textState.translateY ?? 0) * scaleY;
           const animBlur = textState.blur ?? 0;
 
-          // Calculate layer position and size
-          const layerX = layer.position.x * scaleX;
-          const layerY = layer.position.y * scaleY;
-          const layerWidth = layer.size.width * scaleX;
-          const layerHeight = layer.size.height * scaleY;
+          // Calculate layer position and size (use correct property names)
+          const layerX = layer.x * scaleX;
+          const layerY = layer.y * scaleY;
+          const layerWidth = layer.width * scaleX;
+          const layerHeight = layer.height * scaleY;
           const layerCenterX = layerX + layerWidth / 2;
           const layerCenterY = layerY + layerHeight / 2;
 
           // Apply animation transforms
-          ctx.globalAlpha = animOpacity;
+          ctx.globalAlpha = animOpacity * layer.opacity;
           ctx.translate(layerCenterX, layerCenterY + animTranslateY);
           ctx.scale(animScale, animScale);
           ctx.translate(-layerCenterX, -layerCenterY);
@@ -412,46 +412,19 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
             ctx.filter = `blur(${animBlur}px)`;
           }
 
-          // Draw text box background if opacity > 0
-          if (layer.boxOpacity > 0) {
-            ctx.fillStyle = `rgba(0, 0, 0, ${layer.boxOpacity})`;
-            const boxPadding = 16 * scaleY;
-            ctx.fillRect(
-              layerX - boxPadding,
-              layerY - boxPadding,
-              layerWidth + boxPadding * 2,
-              layerHeight + boxPadding * 2
-            );
-          }
-
           // Draw text
           const fontSize = layer.fontSize * scaleY;
-          ctx.font = `${layer.fontStyle || "normal"} ${
-            layer.fontWeight || "normal"
-          } ${fontSize}px ${layer.fontFamily}`;
-          ctx.fillStyle = layer.textColor;
-          ctx.textAlign = (layer.textAlign || "center") as CanvasTextAlign;
+          ctx.font = `${fontSize}px ${layer.fontFamily}`;
+          ctx.fillStyle = layer.color;
+          ctx.textAlign = "center" as CanvasTextAlign;
           ctx.textBaseline = "top";
 
-          // Handle shadow
-          if (layer.shadowBlur > 0) {
-            ctx.shadowColor = layer.shadowColor || "rgba(0,0,0,0.5)";
-            ctx.shadowBlur = layer.shadowBlur * scaleY;
-            ctx.shadowOffsetX = (layer.shadowX || 0) * scaleX;
-            ctx.shadowOffsetY = (layer.shadowY || 0) * scaleY;
-          }
-
-          // Calculate text X position based on alignment
-          let textX = layerX;
-          if (layer.textAlign === "center") {
-            textX = layerX + layerWidth / 2;
-          } else if (layer.textAlign === "right") {
-            textX = layerX + layerWidth;
-          }
+          // Calculate text X position (centered)
+          const textX = layerX + layerWidth / 2;
 
           // Draw text with word wrap
-          const lines = layer.content.split("\n");
-          const lineHeight = fontSize * (layer.lineHeight || 1.5);
+          const lines = layer.text.split("\n");
+          const lineHeight = fontSize * 1.5;
           let textY = layerY;
 
           for (const line of lines) {
