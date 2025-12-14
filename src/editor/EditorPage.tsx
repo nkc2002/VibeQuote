@@ -17,11 +17,19 @@ const EditorPage = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Audio player hook for music preview
-  useAudioPlayer({
+  const { stop: stopMusic, reset: resetMusic } = useAudioPlayer({
     trackId: state.selectedMusicId,
     volume: state.musicVolume,
     enabled: state.musicEnabled,
     isPlaying: state.isMusicPlaying,
+    onPlayStateChange: useCallback(
+      (playing: boolean) => {
+        if (!playing && state.isMusicPlaying) {
+          dispatch({ type: "TOGGLE_MUSIC_PLAYING" });
+        }
+      },
+      [state.isMusicPlaying]
+    ),
   });
 
   // Animation preview state
