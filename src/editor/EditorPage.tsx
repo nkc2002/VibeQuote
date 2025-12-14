@@ -50,8 +50,10 @@ const EditorPage = () => {
     isPlaying: state.isMusicPlaying && !isPreviewRunning,
     onPlayStateChange: useCallback(
       (playing: boolean) => {
+        // Only dispatch when audio ends naturally (playing becomes false while state says playing)
+        // This prevents double-toggle when user manually clicks pause
         if (!playing && state.isMusicPlaying && !isPreviewRunning) {
-          dispatch({ type: "TOGGLE_MUSIC_PLAYING" });
+          dispatch({ type: "SET_MUSIC_PLAYING", payload: false });
         }
       },
       [state.isMusicPlaying, isPreviewRunning]

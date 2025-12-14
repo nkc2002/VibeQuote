@@ -363,6 +363,9 @@ export function editorReducer(
     case "TOGGLE_MUSIC_PLAYING":
       return { ...state, isMusicPlaying: !state.isMusicPlaying };
 
+    case "SET_MUSIC_PLAYING":
+      return { ...state, isMusicPlaying: action.payload };
+
     case "SET_PARTICLE_EFFECT":
       return { ...state, particleEffect: action.payload };
 

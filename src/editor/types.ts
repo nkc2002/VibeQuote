@@ -126,6 +126,7 @@ export type EditorAction =
   | { type: "SET_MUSIC_VOLUME"; payload: number }
   | { type: "TOGGLE_MUSIC_ENABLED" }
   | { type: "TOGGLE_MUSIC_PLAYING" }
+  | { type: "SET_MUSIC_PLAYING"; payload: boolean }
   | {
       type: "SET_PARTICLE_EFFECT";
       payload: "none" | "snow" | "dust" | "sparkles";
