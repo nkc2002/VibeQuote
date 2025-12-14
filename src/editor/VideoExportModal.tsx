@@ -328,33 +328,32 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
       };
 
       // Step 5: Record video frames with animation system
-      const durationMs = options.duration * 1000;
-      const totalFrames = Math.floor(options.duration * FPS);
+      const totalFrames = options.duration * FPS;
+      const frameIntervalMs = 1000 / FPS;
 
-      // Calculate text animation duration (same as Preview)
+      // Calculate text animation (frames that have animation)
       const textAnimDurationPercent = getAnimationDuration(
         options.textAnimation
       );
-      const textAnimDurationMs = textAnimDurationPercent * durationMs;
+      const animationFrames = Math.floor(textAnimDurationPercent * totalFrames);
 
       mediaRecorder.start(100); // Request data every 100ms
 
-      // Animation loop using time-based animations (same as usePreview)
-      const startTime = performance.now();
-      let frameCount = 0;
+      // Frame-based rendering (more reliable than requestAnimationFrame)
+      let currentFrame = 0;
 
       // Scale factor for layers (source canvas to export canvas)
       const scaleX = width / 1920;
       const scaleY = height / 1080;
 
-      const drawFrame = (timestamp: number) => {
-        const elapsed = timestamp - startTime;
-        const timeProgress = Math.min(elapsed / durationMs, 1);
+      const drawFrame = () => {
+        // Calculate progress based on frames (not elapsed time)
+        const timeProgress = currentFrame / totalFrames;
 
-        // Calculate text animation progress (same as Preview)
+        // Calculate text animation progress
         let textAnimProgress = 1;
-        if (textAnimDurationMs > 0 && elapsed < textAnimDurationMs) {
-          textAnimProgress = elapsed / textAnimDurationMs;
+        if (animationFrames > 0 && currentFrame < animationFrames) {
+          textAnimProgress = currentFrame / animationFrames;
         }
 
         // Get animation states from our animation system
@@ -441,19 +440,22 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
         }
 
         // Update progress
-        frameCount++;
-        setProgress(30 + Math.floor((frameCount / totalFrames) * 60));
+        currentFrame++;
+        setProgress(30 + Math.floor((currentFrame / totalFrames) * 60));
 
-        if (elapsed < durationMs) {
-          animationFrameRef.current = requestAnimationFrame(drawFrame);
+        // Check if done using frame count
+        if (currentFrame < totalFrames) {
+          // Continue with setTimeout for reliable timing
+          setTimeout(drawFrame, frameIntervalMs);
         } else {
-          // Stop recording exactly when duration ends
+          // Stop recording when all frames are done
+          console.log("[VideoExport] Complete, frames:", currentFrame);
           mediaRecorder.stop();
         }
       };
 
-      // Start drawing
-      animationFrameRef.current = requestAnimationFrame(drawFrame);
+      // Start drawing first frame
+      drawFrame();
 
       // Wait for recording to complete and auto-download
       await new Promise<void>((resolve) => {
