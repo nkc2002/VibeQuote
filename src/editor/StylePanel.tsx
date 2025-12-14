@@ -25,25 +25,44 @@ const ANIMATION_OPTIONS: {
   icon: string;
   description: string;
 }[] = [
-  { id: "none", name: "Không", icon: "○", description: "Tắt animation" },
-  { id: "fadeIn", name: "Fade In", icon: "◐", description: "Hiện dần" },
-  { id: "fadeOut", name: "Fade Out", icon: "◑", description: "Mờ dần" },
-  { id: "slideUp", name: "Slide Up", icon: "↑", description: "Trượt lên" },
+  { id: "none", name: "Không", icon: "○", description: "Hiện ngay lập tức" },
+  { id: "fadeIn", name: "Fade In", icon: "◐", description: "Mờ dần hiện ra" },
   {
-    id: "slideDown",
-    name: "Slide Down",
-    icon: "↓",
-    description: "Trượt xuống",
+    id: "slideUp",
+    name: "Slide Up",
+    icon: "↑",
+    description: "Trượt lên từ dưới",
   },
-  { id: "slideLeft", name: "Slide Left", icon: "←", description: "Trượt trái" },
   {
-    id: "slideRight",
-    name: "Slide Right",
-    icon: "→",
-    description: "Trượt phải",
+    id: "fadeSlide",
+    name: "Fade Slide",
+    icon: "⤴",
+    description: "Fade + trượt lên nhẹ",
   },
-  { id: "scaleUp", name: "Scale Up", icon: "◎", description: "Phóng to" },
-  { id: "typewriter", name: "Typewriter", icon: "▌", description: "Gõ chữ" },
+  {
+    id: "scaleInSoft",
+    name: "Scale In",
+    icon: "⊕",
+    description: "Phóng to nhẹ từ 90%",
+  },
+  {
+    id: "blurReveal",
+    name: "Blur Reveal",
+    icon: "◎",
+    description: "Từ mờ đến rõ",
+  },
+  {
+    id: "maskReveal",
+    name: "Mask Reveal",
+    icon: "▤",
+    description: "Lộ ra từ dưới lên",
+  },
+  {
+    id: "typewriter",
+    name: "Typewriter",
+    icon: "⌨",
+    description: "Gõ từng chữ",
+  },
 ];
 
 interface StylePanelProps {

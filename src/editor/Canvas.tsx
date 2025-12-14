@@ -517,6 +517,8 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
           const animTranslateY = animState.translateY || 0;
           const animScale = animState.scale ?? 1;
           const animOpacity = animState.opacity ?? 1;
+          const animBlur = animState.blur ?? 0;
+          const animClipPath = animState.clipPath ?? "inset(0 0 0 0)";
 
           return (
             <div
@@ -536,6 +538,8 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
                 fontSize: `${layer.fontSize}px`,
                 color: layer.color,
                 opacity: layer.opacity * animOpacity,
+                filter: animBlur > 0 ? `blur(${animBlur}px)` : undefined,
+                clipPath: animClipPath,
                 textShadow: "0 2px 8px rgba(0,0,0,0.5)",
                 maxWidth: "80%",
                 textAlign: "center",

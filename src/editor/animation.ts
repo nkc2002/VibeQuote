@@ -1,5 +1,5 @@
 /**
- * Text Animation System
+ * Text Animation System v2
  *
  * Animations apply ONLY to text layers.
  * Animations run when: Preview or Generate Video.
@@ -13,12 +13,11 @@
 export type AnimationType =
   | "none"
   | "fadeIn"
-  | "fadeOut"
   | "slideUp"
-  | "slideDown"
-  | "slideLeft"
-  | "slideRight"
-  | "scaleUp"
+  | "fadeSlide"
+  | "scaleInSoft"
+  | "blurReveal"
+  | "maskReveal"
   | "typewriter";
 
 export interface AnimationState {
@@ -26,7 +25,9 @@ export interface AnimationState {
   translateX: number;
   translateY: number;
   scale: number;
-  charProgress: number; // 0-1 for typewriter (percentage of chars visible)
+  blur: number; // px
+  clipPath: string; // for mask reveal
+  charProgress: number; // 0-1 for typewriter
 }
 
 // ============================================================
@@ -37,20 +38,22 @@ export interface AnimationState {
 const ANIMATION_DURATIONS: Record<AnimationType, number> = {
   none: 0,
   fadeIn: 0.22, // 22% of total duration
-  fadeOut: 0.18, // 18% of total duration
   slideUp: 0.25, // 25% of total duration
-  slideDown: 0.25,
-  slideLeft: 0.25,
-  slideRight: 0.25,
-  scaleUp: 0.22,
+  fadeSlide: 0.25, // 25% of total duration
+  scaleInSoft: 0.22, // 22% of total duration
+  blurReveal: 0.27, // 27% of total duration
+  maskReveal: 0.3, // 30% of total duration
   typewriter: 0.55, // 55% of total duration
 };
 
 // Slide distance in pixels
-const SLIDE_DISTANCE = 50;
+const SLIDE_DISTANCE = 16; // subtle, cinematic
 
-// Scale start value
-const SCALE_START = 0.8;
+// Scale start value for scaleInSoft
+const SCALE_START = 0.9;
+
+// Blur start value for blurReveal
+const BLUR_START = 8; // subtle blur
 
 // ============================================================
 // Easing Functions
@@ -58,6 +61,10 @@ const SCALE_START = 0.8;
 
 function easeOut(t: number): number {
   return 1 - Math.pow(1 - t, 3);
+}
+
+function easeOutQuad(t: number): number {
+  return 1 - (1 - t) * (1 - t);
 }
 
 function linear(t: number): number {
@@ -72,7 +79,7 @@ function linear(t: number): number {
  * Calculate animation state for a given animation type and progress
  * @param type - Animation type
  * @param progress - Animation progress (0 = start, 1 = end of animation duration)
- * @returns AnimationState with opacity, translate, scale, charProgress
+ * @returns AnimationState with opacity, translate, scale, blur, clipPath, charProgress
  */
 export function getAnimationState(
   type: AnimationType,
@@ -87,6 +94,8 @@ export function getAnimationState(
     translateX: 0,
     translateY: 0,
     scale: 1,
+    blur: 0,
+    clipPath: "inset(0 0 0 0)",
     charProgress: 1,
   };
 
@@ -102,17 +111,6 @@ export function getAnimationState(
       };
     }
 
-    case "fadeOut": {
-      // Fade out runs at the END of video, so we invert
-      // p=0 means start of fadeOut (fully visible)
-      // p=1 means end of fadeOut (invisible)
-      const easedP = easeOut(p);
-      return {
-        ...finalState,
-        opacity: 1 - easedP,
-      };
-    }
-
     case "slideUp": {
       const easedP = easeOut(p);
       return {
@@ -122,39 +120,46 @@ export function getAnimationState(
       };
     }
 
-    case "slideDown": {
+    case "fadeSlide": {
+      // Combined fade + slide, smooth cinematic motion
       const easedP = easeOut(p);
       return {
         ...finalState,
         opacity: easedP,
-        translateY: -SLIDE_DISTANCE * (1 - easedP), // Start above, move down
+        translateY: SLIDE_DISTANCE * (1 - easedP), // subtle upward movement
       };
     }
 
-    case "slideLeft": {
-      const easedP = easeOut(p);
+    case "scaleInSoft": {
+      // Soft scale from 0.9 to 1 with fade
+      const easedP = easeOutQuad(p);
       return {
         ...finalState,
         opacity: easedP,
-        translateX: SLIDE_DISTANCE * (1 - easedP), // Start right, move left
+        scale: SCALE_START + (1 - SCALE_START) * easedP, // 0.9 -> 1
       };
     }
 
-    case "slideRight": {
+    case "blurReveal": {
+      // Blur to clear with fade
       const easedP = easeOut(p);
       return {
         ...finalState,
         opacity: easedP,
-        translateX: -SLIDE_DISTANCE * (1 - easedP), // Start left, move right
+        blur: BLUR_START * (1 - easedP), // 8px -> 0
       };
     }
 
-    case "scaleUp": {
+    case "maskReveal": {
+      // Reveal from bottom to top using clip-path
+      // inset(top right bottom left)
+      // Start: inset(100% 0 0 0) - fully clipped from top
+      // End: inset(0 0 0 0) - fully visible
       const easedP = easeOut(p);
+      const clipTop = 100 * (1 - easedP);
       return {
         ...finalState,
-        opacity: easedP,
-        scale: SCALE_START + (1 - SCALE_START) * easedP, // 0.8 -> 1
+        clipPath: `inset(${clipTop}% 0 0 0)`,
       };
     }
 
@@ -179,13 +184,6 @@ export function getAnimationDuration(type: AnimationType): number {
 }
 
 /**
- * Check if animation type runs at start or end of video
- */
-export function isEndAnimation(type: AnimationType): boolean {
-  return type === "fadeOut";
-}
-
-/**
  * Get the final (completed) animation state
  */
 export function getFinalState(): AnimationState {
@@ -194,6 +192,8 @@ export function getFinalState(): AnimationState {
     translateX: 0,
     translateY: 0,
     scale: 1,
+    blur: 0,
+    clipPath: "inset(0 0 0 0)",
     charProgress: 1,
   };
 }
@@ -204,3 +204,52 @@ export function getFinalState(): AnimationState {
 export function getInitialState(type: AnimationType): AnimationState {
   return getAnimationState(type, 0);
 }
+
+/**
+ * Animation metadata for UI
+ */
+export const ANIMATION_META: Record<
+  AnimationType,
+  { name: string; icon: string; description: string }
+> = {
+  none: {
+    name: "Không",
+    icon: "○",
+    description: "Hiện ngay lập tức",
+  },
+  fadeIn: {
+    name: "Fade In",
+    icon: "◐",
+    description: "Mờ dần hiện ra",
+  },
+  slideUp: {
+    name: "Slide Up",
+    icon: "↑",
+    description: "Trượt lên từ dưới",
+  },
+  fadeSlide: {
+    name: "Fade Slide",
+    icon: "⤴",
+    description: "Fade + trượt lên nhẹ",
+  },
+  scaleInSoft: {
+    name: "Scale In",
+    icon: "⊕",
+    description: "Phóng to nhẹ từ 90%",
+  },
+  blurReveal: {
+    name: "Blur Reveal",
+    icon: "◎",
+    description: "Từ mờ đến rõ",
+  },
+  maskReveal: {
+    name: "Mask Reveal",
+    icon: "▤",
+    description: "Lộ ra từ dưới lên",
+  },
+  typewriter: {
+    name: "Typewriter",
+    icon: "⌨",
+    description: "Gõ từng chữ",
+  },
+};
