@@ -22,7 +22,7 @@ interface UseAudioPlayerReturn {
 /**
  * Hook to manage audio playback for music preview
  * - No looping by default
- * - Stops and resets when track changes
+ * - Responds to isPlaying prop for play/pause
  * - Volume updates in real-time
  */
 export function useAudioPlayer({
@@ -36,9 +36,15 @@ export function useAudioPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const prevTrackIdRef = useRef<string | null>(null);
 
-  // Create/update audio element when track changes
+  // Create audio element when track changes
   useEffect(() => {
+    // Only recreate audio if track actually changed
+    if (prevTrackIdRef.current === trackId && audioRef.current) {
+      return;
+    }
+
     // Cleanup previous audio
     if (audioRef.current) {
       audioRef.current.pause();
@@ -49,6 +55,7 @@ export function useAudioPlayer({
     setIsReady(false);
     setCurrentTime(0);
     setDuration(0);
+    prevTrackIdRef.current = trackId;
 
     if (!trackId || !enabled) {
       return;
@@ -59,7 +66,7 @@ export function useAudioPlayer({
 
     // Create new audio element
     const audio = new Audio(track.url);
-    audio.loop = false; // No looping
+    audio.loop = false;
     audio.volume = volume;
     audioRef.current = audio;
 
@@ -89,11 +96,6 @@ export function useAudioPlayer({
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
 
-    // Auto-play if isPlaying
-    if (isPlaying) {
-      audio.play().catch(console.error);
-    }
-
     return () => {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
@@ -102,19 +104,22 @@ export function useAudioPlayer({
       audio.pause();
       audio.src = "";
     };
-  }, [trackId, enabled]);
+  }, [trackId, enabled, volume, onPlayStateChange]);
 
-  // Handle play/pause state changes
+  // Handle play/pause state changes - this is the key effect
   useEffect(() => {
-    if (!audioRef.current || !enabled) return;
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    if (isPlaying) {
-      audioRef.current.play().catch((err) => {
+    if (isPlaying && enabled) {
+      // Play
+      audio.play().catch((err) => {
         console.error("Playback failed:", err);
         onPlayStateChange?.(false);
       });
     } else {
-      audioRef.current.pause();
+      // Pause
+      audio.pause();
     }
   }, [isPlaying, enabled, onPlayStateChange]);
 
