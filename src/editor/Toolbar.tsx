@@ -142,29 +142,38 @@ const Toolbar = ({
           aria-hidden="true"
         />
 
-        {/* Preview Animation button */}
+        {/* Preview button - Play/Stop toggle */}
         <button
           onClick={onPreviewAnimation}
-          disabled={isAnimating}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer
             ${
               isAnimating
-                ? "bg-primary-600 text-white"
+                ? "bg-red-600 hover:bg-red-700 text-white"
                 : "text-slate-400 hover:text-white hover:bg-slate-800"
-            }
-            ${isAnimating ? "opacity-75" : ""}`}
-          aria-label="Preview animation"
+            }`}
+          aria-label={isAnimating ? "Stop preview" : "Start preview"}
         >
-          <svg
-            className="w-5 h-5"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path d="M8 5v14l11-7z" />
-          </svg>
+          {isAnimating ? (
+            <svg
+              className="w-5 h-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+            </svg>
+          ) : (
+            <svg
+              className="w-5 h-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
           <span className="hidden sm:inline text-sm font-medium">
-            {isAnimating ? "Playing..." : "Preview"}
+            {isAnimating ? "Stop" : "Preview"}
           </span>
         </button>
 
