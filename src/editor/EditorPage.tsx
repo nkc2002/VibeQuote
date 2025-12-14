@@ -17,7 +17,7 @@ const EditorPage = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Audio player hook for music preview
-  const { stop: stopMusic, reset: resetMusic } = useAudioPlayer({
+  const { stop: _stopMusic, reset: _resetMusic } = useAudioPlayer({
     trackId: state.selectedMusicId,
     volume: state.musicVolume,
     enabled: state.musicEnabled,
