@@ -8,6 +8,8 @@ import StylePanel from "./StylePanel";
 import VideoExportModal from "./VideoExportModal";
 import { videosApi } from "../api";
 import { useAudioPlayer } from "./useAudioPlayer";
+import { usePreviewAnimation } from "./useAnimationPreview";
+import { AnimationType } from "./animation";
 
 const EditorPage = () => {
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
@@ -21,6 +23,15 @@ const EditorPage = () => {
     enabled: state.musicEnabled,
     isPlaying: state.isMusicPlaying,
   });
+
+  // Animation preview hook
+  const { preview: previewAnimation, reset: _resetAnimation } =
+    usePreviewAnimation(
+      state.textAnimation as AnimationType,
+      useCallback((progress: number) => {
+        dispatch({ type: "SET_ANIMATION_PROGRESS", payload: progress });
+      }, [])
+    );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -228,7 +239,23 @@ const EditorPage = () => {
             {/* Canvas info */}
             <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
               <span>{state.layers.length} layer(s)</span>
-              <span>16:9 • 1920×1080</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={previewAnimation}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500/20 hover:bg-primary-500/30 text-primary-300 rounded-lg transition-colors cursor-pointer"
+                  title="Preview animation"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <span>Preview</span>
+                </button>
+                <span>16:9 • 1920×1080</span>
+              </div>
             </div>
           </div>
         </main>

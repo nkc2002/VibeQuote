@@ -561,7 +561,24 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
                 }
               }}
             >
-              {layer.text}
+              {/* Typewriter effect: show partial text */}
+              {textAnimation === "typewriter" ? (
+                <span>
+                  <span>
+                    {layer.text.slice(
+                      0,
+                      Math.floor(layer.text.length * animState.charProgress)
+                    )}
+                  </span>
+                  <span style={{ visibility: "hidden" }}>
+                    {layer.text.slice(
+                      Math.floor(layer.text.length * animState.charProgress)
+                    )}
+                  </span>
+                </span>
+              ) : (
+                layer.text
+              )}
 
               {/* Resize handles */}
               {layer.isSelected && !isPreviewMode && onResizeLayer && (
