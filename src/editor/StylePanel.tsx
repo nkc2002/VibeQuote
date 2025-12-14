@@ -8,7 +8,7 @@ import {
 } from "./stylePresets";
 import { AnimationType } from "./animation";
 import { MUSIC_TRACKS, formatDuration } from "./music";
-import { ParticleType, getParticleTypeLabel } from "./particles";
+import { ParticleType } from "./particles";
 
 // Particle effect options
 const PARTICLE_OPTIONS: { id: ParticleType; name: string; icon: string }[] = [
