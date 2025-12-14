@@ -116,7 +116,7 @@ export const STYLE_PRESETS: StylePreset[] = [
     textColor: "#FFFFFF",
     shadow: { offsetX: 0, offsetY: 4, blur: 16, color: "rgba(0,0,0,0.7)" },
     overlayOpacity: 0.4,
-    animation: "zoomIn",
+    animation: "scaleUp",
     previewGradient: "linear-gradient(135deg, #f5af19 0%, #f12711 100%)",
   },
   {
@@ -205,7 +205,7 @@ export const STYLE_PRESETS: StylePreset[] = [
     textColor: "#FFE4B5",
     shadow: { offsetX: 3, offsetY: 3, blur: 0, color: "#8B4513" },
     overlayOpacity: 0.35,
-    animation: "zoomIn",
+    animation: "scaleUp",
     previewGradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
   },
   {

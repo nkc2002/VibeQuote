@@ -40,7 +40,7 @@ const VideoExportModal: React.FC<VideoExportModalProps> = ({
   const [options, setOptions] = useState<VideoExportOptions>({
     duration: 5,
     quality: "1080p",
-    backgroundAnimation: "zoomIn",
+    backgroundAnimation: "fadeIn",
     textAnimation: "fadeIn",
   });
   const [progress, setProgress] = useState(0);

@@ -1,9 +1,5 @@
 import { useCallback, useRef, useEffect } from "react";
-import {
-  AnimationType,
-  getAnimationDuration,
-  isEndAnimation,
-} from "./animation";
+import { AnimationType, getAnimationDuration } from "./animation";
 
 interface UseAnimationPreviewOptions {
   animationType: AnimationType;
