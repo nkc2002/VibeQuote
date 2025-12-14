@@ -122,6 +122,7 @@ export type EditorAction =
   | { type: "TOGGLE_ANIMATION" }
   | { type: "SET_ANIMATION_PROGRESS"; payload: number }
   | { type: "SET_MUSIC_TRACK"; payload: string | null }
+  | { type: "PLAY_MUSIC_TRACK"; payload: string }
   | { type: "SET_MUSIC_VOLUME"; payload: number }
   | { type: "TOGGLE_MUSIC_ENABLED" }
   | { type: "TOGGLE_MUSIC_PLAYING" }

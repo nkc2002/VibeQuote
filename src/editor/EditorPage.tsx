@@ -337,6 +337,9 @@ const EditorPage = () => {
               onSetMusicTrack={(trackId) =>
                 dispatch({ type: "SET_MUSIC_TRACK", payload: trackId })
               }
+              onPlayMusicTrack={(trackId) =>
+                dispatch({ type: "PLAY_MUSIC_TRACK", payload: trackId })
+              }
               onSetMusicVolume={(volume) =>
                 dispatch({ type: "SET_MUSIC_VOLUME", payload: volume })
               }

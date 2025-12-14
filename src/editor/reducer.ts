@@ -339,6 +339,15 @@ export function editorReducer(
         ...state,
         selectedMusicId: action.payload,
         musicEnabled: action.payload !== null,
+        isMusicPlaying: false, // Stop playing when changing track
+      };
+
+    case "PLAY_MUSIC_TRACK":
+      return {
+        ...state,
+        selectedMusicId: action.payload,
+        musicEnabled: true,
+        isMusicPlaying: true, // Select and start playing
       };
 
     case "SET_MUSIC_VOLUME":

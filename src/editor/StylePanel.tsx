@@ -97,6 +97,7 @@ interface StylePanelProps {
   onSetParticleEffect: (effect: ParticleType) => void;
   // Music callbacks
   onSetMusicTrack: (trackId: string | null) => void;
+  onPlayMusicTrack: (trackId: string) => void;
   onSetMusicVolume: (volume: number) => void;
   onToggleMusicEnabled: () => void;
   onToggleMusicPlaying: () => void;
@@ -141,6 +142,7 @@ const StylePanel = ({
   onSetTextAnimation,
   onSetParticleEffect,
   onSetMusicTrack,
+  onPlayMusicTrack,
   onSetMusicVolume,
   onToggleMusicEnabled,
   onToggleMusicPlaying,
@@ -546,9 +548,11 @@ const StylePanel = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isSelected) {
+                            // Toggle play/pause for selected track
                             onToggleMusicPlaying();
                           } else {
-                            onSetMusicTrack(track.id);
+                            // Select new track and start playing (atomic action)
+                            onPlayMusicTrack(track.id);
                           }
                         }}
                         className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
